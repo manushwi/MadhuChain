@@ -34,6 +34,7 @@ chain/chaincode/**/bin/
 chain/chaincode/**/vendor/
 chain/chaincode/**/*.test
 chain/chaincode/**/*.out
+chain/chaincode/**/*.exe
 
 # Fabric crypto material (regenerated, never commit)
 chain/network/organizations/
