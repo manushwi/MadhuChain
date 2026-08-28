@@ -1,41 +1,101 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+export const palette = {
+  background: '#EFEEE9', // Main background — Warm Ivory
+  surface: '#E2DECE', // Main surface — Soft Cream
+  surfaceAlt: '#D9D2C1', // Secondary surface — Champagne Beige
+  sand: '#C9B69B', // Deep beige — Sand
+  accent: '#C4835E', // Accent — Soft Terracotta
+  accentBright: '#F39A68', // Bright accent — Peach Orange
+  primaryDark: '#9B4E32', // Primary dark — Terracotta Brown
+  darkAccent: '#81432D', // Dark accent — Cocoa Brown
+  highlight: '#F8F7F2', // Highlight — Near White
+  muted: '#A7A397', // Muted text — Warm Gray
+} as const;
 
-export const Colors = {
+export const darkPalette = {
+  background: '#1A1712',
+  surface: '#262218',
+  surfaceAlt: '#2E2920',
+  sand: '#4A4032',
+  accent: '#C4835E',
+  accentBright: '#F39A68',
+  primaryDark: '#E0A67F',
+  darkAccent: '#F0BFA0',
+  highlight: '#3A342A',
+  muted: '#8C8578',
+} as const;
+
+export type HoneychainPalette = typeof palette;
+
+// Deep warm shadow tone derived from sand/muted for neumorphism dark edge
+export const themeShadow = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    light: '#FFFFFF',
+    dark: '#C4BBAA',
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    light: '#2E2A22',
+    dark: '#12100C',
   },
-};
+} as const;
+
+export type ColorScheme = 'light' | 'dark';
+
+export function getPalette(scheme: ColorScheme): HoneychainPalette {
+  return scheme === 'dark' ? (darkPalette as unknown as HoneychainPalette) : palette;
+}
+
+export const statusColors = (c: HoneychainPalette) => ({
+  healthy: c.accentBright,
+  watch: c.accent,
+  alert: c.darkAccent,
+});
+
+export const batchStatusColors = (c: HoneychainPalette) => ({
+  MINTED: c.accentBright,
+  'IN TRANSIT': c.accent,
+  'AT FACTORY': c.sand,
+  PROCESSING: c.accent,
+  RELEASED: c.primaryDark,
+  FLAGGED: c.darkAccent,
+});
+
+// Neumorphic soft shadow (dual-edge) applied to themed Views.
+// Works cross-platform: elevation for Android, shadow* for iOS.
+export function neuShadow(scheme: ColorScheme, intensity = 6) {
+  const s = themeShadow[scheme];
+  const distance = intensity;
+  return {
+    shadowColor: s.dark,
+    shadowOffset: { width: distance, height: distance },
+    shadowOpacity: 0.5,
+    shadowRadius: distance,
+    elevation: intensity * 2,
+    ...(Platform.OS === 'ios' && {
+      // highlight edge via border trick handled by themed surface color
+    }),
+  };
+}
+
+// Inset (pressed) variation for inputs / toggles
+export function neuInset(scheme: ColorScheme, intensity = 6) {
+  const s = themeShadow[scheme];
+  const distance = intensity;
+  return {
+    shadowColor: s.light,
+    shadowOffset: { width: -distance, height: -distance },
+    shadowOpacity: 0.5,
+    shadowRadius: distance,
+    elevation: 0,
+  };
+}
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {
@@ -51,3 +111,23 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+// Compatibility export for the (tabs) layout / navigation label
+export const Colors = {
+  light: {
+    text: palette.primaryDark,
+    background: palette.background,
+    tint: palette.accent,
+    icon: palette.muted,
+    tabIconDefault: palette.muted,
+    tabIconSelected: palette.primaryDark,
+  },
+  dark: {
+    text: darkPalette.primaryDark,
+    background: darkPalette.background,
+    tint: darkPalette.accent,
+    icon: darkPalette.muted,
+    tabIconDefault: darkPalette.muted,
+    tabIconSelected: darkPalette.primaryDark,
+  },
+};
