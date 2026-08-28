@@ -1,98 +1,131 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Text } from 'react-native-paper';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { Neumorph } from '@/components/ui/neumorph';
+import { Screen } from '@/components/ui/screen';
+import { getPalette } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAlerts, useBatches, useHives, useProfile } from '@/hooks/use-queries';
+import type { BatchStatus } from '@/lib/types';
 
-export default function HomeScreen() {
+const inProgressStatuses: BatchStatus[] = ['MINTED', 'IN TRANSIT', 'AT FACTORY', 'PROCESSING'];
+
+export default function DashboardScreen() {
+  const scheme = useColorScheme() ?? 'light';
+  const c = getPalette(scheme);
+
+  const { data: profile } = useProfile();
+  const { data: hives } = useHives();
+  const { data: alerts } = useAlerts();
+  const { data: batches } = useBatches();
+
+  const activeAlerts = alerts?.filter((a) => !a.acknowledged) ?? [];
+  const inProgress = batches?.filter((b) => inProgressStatuses.includes(b.status)) ?? [];
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <Screen>
+      <Text variant="headlineMedium" style={[styles.greeting, { color: c.darkAccent }]}>
+        Hello, {profile?.name?.split(' ')[0] ?? 'Beekeeper'}
+      </Text>
+      <Text variant="bodyMedium" style={{ color: c.muted, marginBottom: 20 }}>
+        {profile?.apiary_name ?? 'Your apiary'}
+      </Text>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      <View style={styles.grid}>
+        <StatCard
+          icon="hexagon-multiple-outline"
+          label="Total Hives"
+          value={hives?.length ?? '–'}
+          color={c.accent}
+        />
+        <StatCard
+          icon="bell-outline"
+          label="Active Alerts"
+          value={activeAlerts.length}
+          color={activeAlerts.length > 0 ? c.darkAccent : c.accent}
+        />
+        <StatCard
+          icon="package-variant-closed"
+          label="Batches"
+          value={batches?.length ?? '–'}
+          color={c.sand}
+        />
+        <StatCard
+          icon="progress-clock"
+          label="In Progress"
+          value={inProgress.length}
+          color={c.accentBright}
+        />
+      </View>
+
+      <Text variant="titleMedium" style={[styles.sectionTitle, { color: c.primaryDark }]}>
+        Quick Actions
+      </Text>
+      <View style={styles.actions}>
+        <ActionCard icon="barcode-scan" label="New Harvest" color={c.accent} onPress={() => router.push('/harvest/new')} />
+        <ActionCard icon="plus-circle-outline" label="Register Hive" color={c.primaryDark} onPress={() => router.push('/hives?register=1')} />
+        <ActionCard icon="bell-ring-outline" label="View Alerts" color={c.darkAccent} onPress={() => router.push('/alerts')} />
+      </View>
+    </Screen>
+  );
+}
+
+function StatCard({
+  icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+  label: string;
+  value: number | string;
+  color: string;
+}) {
+  return (
+    <Neumorph style={styles.statCard}>
+      <MaterialCommunityIcons name={icon} size={26} color={color} />
+      <Text variant="headlineSmall" style={{ color }}>
+        {value}
+      </Text>
+      <Text variant="labelMedium" style={{ color: getPalette('light').muted }}>
+        {label}
+      </Text>
+    </Neumorph>
+  );
+}
+
+function ActionCard({
+  icon,
+  label,
+  color,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+  label: string;
+  color: string;
+  onPress: () => void;
+}) {
+  const scheme = useColorScheme() ?? 'light';
+  const c = getPalette(scheme);
+  return (
+    <Neumorph style={styles.actionCard}>
+      <MaterialCommunityIcons name={icon} size={34} color={color} style={styles.actionIcon} />
+      <Text variant="labelLarge" style={{ color: c.primaryDark, textAlign: 'center' }}>
+        {label}
+      </Text>
+    </Neumorph>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  greeting: { fontWeight: '700', marginTop: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 },
+  statCard: { width: '48%', borderRadius: 20 },
+  sectionTitle: { marginTop: 24, marginBottom: 12, fontWeight: '600' },
+  actions: { flexDirection: 'row', gap: 12 },
+  actionCard: { flex: 1, borderRadius: 20, alignItems: 'center' },
+  actionIcon: { marginBottom: 8 },
 });
