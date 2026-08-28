@@ -1,0 +1,20 @@
+{
+  "name": "honeychain",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "bun@1.4.0",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "bun run --filter backend dev",
+    "dev:beekeeper": "bun run --filter beekeeper-app start",
+    "dev:factory": "bun run --filter factory-app start",
+    "dev:consumer": "bun run --filter consumer-web dev"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
