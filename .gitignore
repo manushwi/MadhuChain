@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Env files (keep .env.example committed)
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Bun
+bun.lockb
+.bun/
+
+# Prisma
+services/backend/prisma/dev.db*
+services/backend/prisma/*.db-journal
+
+# Go
+chain/chaincode/**/bin/
+chain/chaincode/**/vendor/
+chain/chaincode/**/*.test
+chain/chaincode/**/*.out
+
+# Fabric crypto material (regenerated, never commit)
+chain/network/organizations/
+chain/network/scripts/**/*.log
+chain/network/channel-artifacts/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
