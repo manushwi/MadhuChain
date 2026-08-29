@@ -1,0 +1,303 @@
+// HoneyChain - Prisma schema
+// Database: PostgreSQL with TimescaleDB extension
+// NOTE: the SensorReading table is converted to a TimescaleDB hypertable via
+// a raw SQL migration (see prisma/migrations/xxx_init/migration.sql).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users & identities (custodial)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String?   @unique
+  phone         String?   @unique
+  passwordHash  String
+  role          Role
+  apiaryName    String?
+  location      String?
+  gpsLat        Float?
+  gpsLng        Float?
+  fabricUserID  String? // Custodial Fabric enrollment role identity (e.g. "beekeeper"); multiple app users share the role identity on-chain
+  encryptedKey  String?          // AES-GCM encrypted Fabric private key (custodial)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  hives       Hive[]
+  batches     Batch[]
+  profile     Profile?
+}
+
+enum Role {
+  BEEKEEPER
+  TRANSPORTER
+  LABTECH
+  FACTORYWORKER
+  QCMANAGER
+  DISTRIBUTOR
+  ADMIN
+  CONSUMER
+}
+
+model Profile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  notificationPrefs Json?
+  appLanguage    String   @default("en")
+  user           User     @relation(fields: [userId], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// Hives & sensors
+// ---------------------------------------------------------------------------
+
+model Hive {
+  id            String   @id @default(cuid())
+  hiveId        String   @unique              // physical sensor hive_id, e.g. "H-014"
+  beekeeperId   String?
+  sensorNodeId  String?
+  location      String?
+  gpsLat        Float?
+  gpsLng        Float?
+  registeredAt  DateTime @default(now())
+
+  beekeeper  User?          @relation(fields: [beekeeperId], references: [id])
+  readings   SensorReading[]
+  alerts     Alert[]
+  batches    BatchHive[]
+
+  @@index([beekeeperId])
+}
+
+// Raw and aggregated sensor readings - stored as a TimescaleDB hypertable.
+// The primary key includes the time column (required for hypertable partitioning).
+model SensorReading {
+  hiveId   String
+  ts       DateTime @db.Timestamptz(6)
+  tempIn   Float?
+  humIn    Float?
+  weightKg Float?
+  tempOut  Float?
+  batteryV Float?
+
+  hive Hive @relation(fields: [hiveId], references: [hiveId], onDelete: Cascade)
+
+  @@id([hiveId, ts])
+  @@index([hiveId, ts(sort: Desc)])
+  // TimescaleDB hypertable created via raw SQL migration
+}
+
+// ---------------------------------------------------------------------------
+// Supply chain: suppliers, lots, batches
+// ---------------------------------------------------------------------------
+
+model Supplier {
+  id          String   @id @default(cuid())
+  supplierId  String   @unique
+  name        String
+  type        SupplierType // Platform | External
+  contactInfo String?
+  trustTier   Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  lots Lot[]
+}
+
+enum SupplierType {
+  PLATFORM
+  EXTERNAL
+}
+
+model Lot {
+  id             String   @id @default(cuid())
+  lotId          String   @unique            // e.g. "HC-LOT-042"
+  batchId        String?                     // null for External-only declared lots
+  supplierId     String?
+  supplierType   SupplierType
+  weightKg       Float
+  deliveryDate   DateTime?
+  declaredOrigin String?
+  intakeTestId   String?
+  createdAt      DateTime @default(now())
+
+  batch    Batch?           @relation(fields: [batchId], references: [batchId])
+  supplier Supplier?        @relation(fields: [supplierId], references: [supplierId])
+  blendOut BlendComposition[]
+}
+
+// A production batch. Its on-chain record is the source of truth for state;
+// this table mirrors/linkages for querying.
+model Batch {
+  id             String   @id @default(cuid())
+  batchId        String   @unique           // on-chain key
+  lotId          String?   @unique
+  beekeeperId    String?
+  state          String   @default("RECEIVED")
+  harvestStart   DateTime?
+  harvestEnd     DateTime?
+  weightKg       Float?
+  sensorDataHash String?
+  barcodePayload Json?
+  flagged        Boolean  @default(false)
+  flagReason     String?
+  flagResolution String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  beekeeper       User?                @relation(fields: [beekeeperId], references: [id])
+  hives           BatchHive[]
+  lots            Lot[]
+  qualityTests    QualityTest[]
+  processingLog   ProcessingAction[]
+  jarSerials      JarSerial[]
+  ownershipTransfer OwnershipTransfer[]
+  blends          BlendComposition[]   @relation("BlendOut")
+
+  @@index([beekeeperId])
+}
+
+model BatchHive {
+  batchId String
+  hiveId  String
+  batch   Batch @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
+  hive    Hive  @relation(fields: [hiveId], references: [hiveId], onDelete: Cascade)
+
+  @@id([batchId, hiveId])
+}
+
+model QualityTest {
+  id           String            @id @default(cuid())
+  batchId      String
+  stage        TestStage         // INTAKE | OUTPUT | FINAL
+  moisture     Float?
+  hmf          Float?
+  diastase     Float?
+  sugarProfile Json?             // { fructose, glucose, sucrose }
+  isotopeRatio Float?
+  testerId     String?
+  ts           DateTime          @default(now())
+  result       TestResult?
+
+  batch Batch @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
+
+  @@index([batchId])
+}
+
+enum TestStage {
+  INTAKE
+  OUTPUT
+  FINAL
+}
+
+enum TestResult {
+  PASS
+  FLAGGED
+}
+
+model ProcessingAction {
+  id           String   @id @default(cuid())
+  batchId      String
+  actionType   String                      // heating | filtering | blending
+  parameters   Json?
+  operatorId   String?
+  equipmentId  String?
+  weightBefore Float?
+  weightAfter  Float?
+  parentLots   Json?                       // declared parent lots + quantities for blending
+  ts           DateTime @default(now())
+
+  batch Batch @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
+
+  @@index([batchId])
+}
+
+model JarSerial {
+  id            String   @id @default(cuid())
+  batchId       String
+  jarId         String   @unique           // e.g. BATCH-014-JAR-0001
+  packagingDate DateTime @default(now())
+
+  batch Batch @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
+
+  @@index([batchId])
+}
+
+model OwnershipTransfer {
+  id         String   @id @default(cuid())
+  batchId    String
+  fromId     String?
+  toId       String?
+  ts         DateTime @default(now())
+
+  batch Batch @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
+
+  @@index([batchId])
+}
+
+model BlendComposition {
+  id           String @id @default(cuid())
+  blendBatchId String
+  sourceLotId  String
+  weightKg     Float
+  percentage   Float
+
+  blendBatch Batch @relation("BlendOut", fields: [blendBatchId], references: [batchId], onDelete: Cascade)
+  sourceLot  Lot  @relation(fields: [sourceLotId], references: [lotId])
+
+  @@index([blendBatchId])
+}
+
+// ---------------------------------------------------------------------------
+// Consumer verification
+// ---------------------------------------------------------------------------
+
+model AppearanceReport {
+  id        String   @id @default(cuid())
+  jarId     String
+  photoUrl  String?
+  color     String?
+  texture   String?
+  offSmell  Boolean  @default(false)
+  offTaste  Boolean  @default(false)
+  notes     String?
+  ts        DateTime @default(now())
+
+  @@index([jarId])
+}
+
+model Review {
+  id      String  @id @default(cuid())
+  batchId String
+  rating  Int
+  comment String?
+  ts      DateTime @default(now())
+
+  @@index([batchId])
+}
+
+// ---------------------------------------------------------------------------
+// Alerts (theft / brood temp / battery / swarming)
+// ---------------------------------------------------------------------------
+
+model Alert {
+  id           String   @id @default(cuid())
+  hiveId       String
+  type         String                      // THEFT | BROOD_TEMP | LOW_BATTERY | SWARM
+  severity     String   @default("WARNING") // INFO | WARNING | CRITICAL
+  message      String
+  acknowledged Boolean  @default(false)
+  ts           DateTime @default(now())
+
+  hive Hive @relation(fields: [hiveId], references: [hiveId], onDelete: Cascade)
+
+  @@index([hiveId, ts])
+}
