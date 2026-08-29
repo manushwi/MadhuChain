@@ -171,3 +171,88 @@ func TestClearFlagAllowedByQCManagerOnly(t *testing.T) {
 		t.Fatalf("expected flag cleared")
 	}
 }
+
+// Admin is the trusted custodian (backend signs custodially) and may act for
+// any operational role.
+func TestAdminCanActForAnyRole(t *testing.T) {
+	cc := NewHoneyChainContract()
+	ctx := newCtx(RoleAdmin)
+
+	if _, err := cc.MintBatch(ctx, "BATCH-ADMIN", "HC-LOT-ADMIN",
+		`["H-001"]`, "a", "b", 10, "h", `{}`); err != nil {
+		t.Fatalf("admin mint should succeed: %v", err)
+	}
+	if err := cc.RecordReceived(ctx, "BATCH-ADMIN", "transporter-admin", 9.5); err != nil {
+		t.Fatalf("admin RecordReceived should succeed: %v", err)
+	}
+	if err := cc.RecordQualityTest(ctx, "BATCH-ADMIN", "intake", 17.0, 3.0, 8.0,
+		`{"fructose":38,"glucose":31,"sucrose":1}`, -24.5); err != nil {
+		t.Fatalf("admin intake test should succeed: %v", err)
+	}
+	if err := cc.ClearFlag(ctx, "BATCH-ADMIN", "CLEARED"); err == nil {
+		t.Fatalf("clear flag on an un-flagged batch should fail")
+	}
+}
+
+// Happy path: a legitimate batch flows RECEIVED -> ... -> RELEASED including a
+// passing OUTPUT_TEST (regression test for the previously unreachable OUTPUT).
+
+func TestBatchHappyPathToRelease(t *testing.T) {
+	cc := NewHoneyChainContract()
+	ctx := newCtx(RoleBeekeeper)
+	mint(t, cc, ctx, "B4")
+
+	setRole(ctx, RoleTransporter)
+	if err := cc.RecordReceived(ctx, "B4", "transporter-1", 18.0); err != nil {
+		t.Fatalf("received failed: %v", err)
+	}
+	if err := cc.RecordIntake(ctx, "B4", "supplier-1", "Platform", 18.0, "2026-08-28", "loc", "it-1"); err != nil {
+		t.Fatalf("intake failed: %v", err)
+	}
+
+	setRole(ctx, RoleLabTech)
+	if err := cc.RecordQualityTest(ctx, "B4", "intake", 17.0, 3.0, 8.0,
+		`{"fructose":38,"glucose":31,"sucrose":1}`, -24.5); err != nil {
+		t.Fatalf("intake test failed: %v", err)
+	}
+
+	setRole(ctx, RoleFactoryWorker)
+	if err := cc.RecordProcessingAction(ctx, "B4", "filtering", `{}`, "op-1", "eq-1", 18.0, 16.5); err != nil {
+		t.Fatalf("processing action failed: %v", err)
+	}
+
+	setRole(ctx, RoleLabTech)
+	// Passing output test: no composition drift, no mass imbalance.
+	if err := cc.RecordQualityTest(ctx, "B4", "output", 17.0, 3.1, 8.2,
+		`{"fructose":38,"glucose":31,"sucrose":1}`, -24.5); err != nil {
+		t.Fatalf("output test failed: %v", err)
+	}
+
+	b, _ := cc.GetBatch(ctx, "B4")
+	if b.State != StatePackaging {
+		t.Fatalf("expected PACKAGING after passing output test, got %s", b.State)
+	}
+	if b.Flagged {
+		t.Fatalf("expected un-flagged batch on happy path")
+	}
+
+	setRole(ctx, RoleFactoryWorker)
+	if err := cc.RecordPackaging(ctx, "B4", 20, 0.83); err != nil {
+		t.Fatalf("packaging failed: %v", err)
+	}
+	if b, _ = cc.GetBatch(ctx, "B4"); b.State != StateFinalQC {
+		t.Fatalf("expected FINAL_QC after packaging, got %s", b.State)
+	}
+	if b.JarCount != 20 {
+		t.Fatalf("expected 20 jars, got %d", b.JarCount)
+	}
+
+	setRole(ctx, RoleLabTech)
+	if err := cc.RecordQualityTest(ctx, "B4", "final", 17.0, 3.0, 8.0,
+		`{"fructose":38,"glucose":31,"sucrose":1}`, -24.5); err != nil {
+		t.Fatalf("final test failed: %v", err)
+	}
+	if b, _ = cc.GetBatch(ctx, "B4"); b.State != StateReleased {
+		t.Fatalf("expected RELEASED after final test, got %s", b.State)
+	}
+}

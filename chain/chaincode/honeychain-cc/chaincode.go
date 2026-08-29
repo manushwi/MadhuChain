@@ -147,7 +147,10 @@ func (c *HoneyChainContract) requireRole(ctx contractapi.TransactionContextInter
 	if err != nil {
 		return err
 	}
-	if got != role {
+	// Admin is the trusted custodian: the backend signs custodially on behalf
+	// of app users, so an Admin identity may act in any role. Non-admin
+	// identities are still strictly role-checked.
+	if got != role && got != RoleAdmin {
 		return fmt.Errorf("unauthorized: role '%s' required, got '%s'", role, got)
 	}
 	return nil
@@ -179,6 +182,22 @@ func (c *HoneyChainContract) putBatch(ctx contractapi.TransactionContextInterfac
 		return fmt.Errorf("failed to marshal batch: %w", err)
 	}
 	return ctx.GetStub().PutState(batch.BatchID, bytes)
+}
+
+// resolveBatch resolves a batch by either its batch id or its lot id (via the
+// lot_<lotId> index created at mint).
+func (c *HoneyChainContract) resolveBatch(ctx contractapi.TransactionContextInterface, id string) (*Batch, error) {
+	if b, err := c.getBatch(ctx, id); err == nil {
+		return b, nil
+	}
+	bytes, err := ctx.GetStub().GetState("lot_" + id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read lot %s: %w", id, err)
+	}
+	if bytes == nil {
+		return nil, fmt.Errorf("batch or lot %s does not exist", id)
+	}
+	return c.getBatch(ctx, string(bytes))
 }
 
 func (c *HoneyChainContract) now(ctx contractapi.TransactionContextInterface) int64 {
@@ -373,6 +392,11 @@ func (c *HoneyChainContract) MintBatch(
 	if err := c.putBatch(ctx, batch); err != nil {
 		return nil, err
 	}
+	// Lot index: lets BlendBatch and external queries resolve a lot id to its
+	// owning batch (batches are stored under their batch id).
+	if err := ctx.GetStub().PutState("lot_"+lotID, []byte(batchID)); err != nil {
+		return nil, err
+	}
 	return batch, nil
 }
 
@@ -481,7 +505,11 @@ func (c *HoneyChainContract) RecordQualityTest(
 		}
 		batch.State = StateProcessing
 	case "output":
-		batch.OutputWeight = test.Moisture // placeholder to preserve type; real weight handled via processing actions
+		// Only use the test moisture as a weight placeholder when no real
+		// output weight has been recorded (processing actions set it).
+		if batch.OutputWeight == 0 {
+			batch.OutputWeight = test.Moisture
+		}
 		if err := c.checkCompositionalDrift(batch); err != nil {
 			return err
 		}
@@ -489,6 +517,14 @@ func (c *HoneyChainContract) RecordQualityTest(
 			return err
 		}
 		if !batch.Flagged {
+			// A batch still in PROCESSING must first enter OUTPUT_TEST before
+			// it can pass on to packaging (the state machine only allows
+			// PROCESSING -> OUTPUT, then OUTPUT -> PACKAGING).
+			if batch.State == StateProcessing {
+				if err := c.progressBatch(ctx, batch, StateOutput); err != nil {
+					return err
+				}
+			}
 			if err := c.progressBatch(ctx, batch, StatePackaging); err != nil {
 				return err
 			}
@@ -652,7 +688,7 @@ func (c *HoneyChainContract) BlendBatch(
 
 	var totalSrc float64
 	for i := range sources {
-		parent, err := c.getBatch(ctx, sources[i].LotID)
+		parent, err := c.resolveBatch(ctx, sources[i].LotID)
 		if err != nil {
 			return fmt.Errorf("source lot %s not found: %w", sources[i].LotID, err)
 		}
