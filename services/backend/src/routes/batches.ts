@@ -19,6 +19,39 @@ const mintSchema = z.object({
 
 const barcodeDir = path.resolve('barcodes');
 
+// Next available sequential batch/lot id, derived from the max id already in the
+// DB mirror so gaps (e.g. a failed mirror write after a committed mint) don't
+// cause a duplicate that the chaincode rejects with "already exists".
+async function nextBatchSeq(): Promise<number> {
+  const rows = await prisma.batch.findMany({ select: { batchId: true } });
+  let max = 0;
+  for (const r of rows) {
+    const m = /^BATCH-(\d+)$/.exec(r.batchId);
+    if (m && Number(m[1]) > max) max = Number(m[1]);
+  }
+  return max + 1;
+}
+
+function submitMint(
+  batchId: string,
+  lotId: string,
+  data: z.infer<typeof mintSchema>,
+  dataHash: string,
+  payload: BarcodePayload,
+) {
+  return fabricService.submit(
+    'MintBatch',
+    batchId,
+    lotId,
+    JSON.stringify(data.hive_ids),
+    data.harvest_start,
+    data.harvest_end,
+    String(data.weight_kg),
+    dataHash,
+    JSON.stringify(payload),
+  );
+}
+
 export async function mint(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const data = mintSchema.parse(req.body);
@@ -50,52 +83,64 @@ export async function mint(req: Request, res: Response, next: NextFunction): Pro
     );
 
     // IDs.
-    const seq = (await prisma.batch.count()) + 1;
+    const seq = await nextBatchSeq();
     const batchId = `BATCH-${String(seq).padStart(3, '0')}`;
     const lotId = `HC-LOT-${String(seq).padStart(3, '0')}`;
     const harvestDate = data.harvest_end.slice(0, 10);
     const payload: BarcodePayload = { lot_id: lotId, weight_kg: data.weight_kg, harvest_date: harvestDate };
 
-    // Mint on-chain (Beekeeper role).
-    const mintResult = await fabricService.submit(
-      'MintBatch',
-      batchId,
-      lotId,
-      JSON.stringify(data.hive_ids),
-      data.harvest_start,
-      data.harvest_end,
-      String(data.weight_kg),
-      dataHash,
-      JSON.stringify(payload),
-    );
+    // Mint on-chain (Beekeeper role). If the DB mirror is behind the chain
+    // (candidate id already exists), bump past the colliding id and retry once.
+    let mintResult: string;
+    let submittedBatchId = batchId;
+    let submittedLotId = lotId;
+    try {
+      mintResult = await submitMint(submittedBatchId, submittedLotId, data, dataHash, payload);
+    } catch (err) {
+      const m = /BATCH-(\d+) already exists/.exec(String(err));
+      if (m) {
+        const bumped = Number(m[1]) + 1;
+        submittedBatchId = `BATCH-${String(bumped).padStart(3, '0')}`;
+        submittedLotId = `HC-LOT-${String(bumped).padStart(3, '0')}`;
+        payload.lot_id = submittedLotId;
+        mintResult = await submitMint(submittedBatchId, submittedLotId, data, dataHash, payload);
+      } else {
+        throw err;
+      }
+    }
 
     // Generate + persist the label PDF.
     const pdf = await buildLabelPdf(payload);
     fs.mkdirSync(barcodeDir, { recursive: true });
-    const filename = `${lotId}.pdf`;
+    const filename = `${submittedLotId}.pdf`;
     fs.writeFileSync(path.join(barcodeDir, filename), pdf);
 
-    // Store off-chain record.
-    await prisma.batch.create({
-      data: {
-        batchId,
-        lotId,
-        beekeeperId: req.user?.userId,
-        state: 'RECEIVED',
-        harvestStart: new Date(data.harvest_start),
-        harvestEnd: new Date(data.harvest_end),
-        weightKg: data.weight_kg,
-        sensorDataHash: dataHash,
-        barcodePayload: payload as any,
-        hives: { create: hives.map((h) => ({ hiveId: h.hiveId })) },
-      },
-    });
+    // Store off-chain record (mirror only - never fatal: the ledger is the
+    // source of truth, and a failed mirror must not burn a minted id).
+    try {
+      await prisma.batch.create({
+        data: {
+          batchId: submittedBatchId,
+          lotId: submittedLotId,
+          beekeeperId: req.user?.userId,
+          state: 'RECEIVED',
+          harvestStart: new Date(data.harvest_start),
+          harvestEnd: new Date(data.harvest_end),
+          weightKg: data.weight_kg,
+          sensorDataHash: dataHash,
+          barcodePayload: { ...payload, lot_id: submittedLotId } as any,
+          hives: { create: hives.map((h) => ({ hiveId: h.hiveId })) },
+        },
+      });
+    } catch (e) {
+      console.error(`[mint] on-chain batch ${submittedBatchId} committed but DB mirror failed`, e);
+    }
 
     res.status(201).json({
-      batch_id: batchId,
-      lot_id: lotId,
-      barcode_id: lotId,
-      payload,
+      batch_id: submittedBatchId,
+      lot_id: submittedLotId,
+      barcode_id: submittedLotId,
+      payload: { ...payload, lot_id: submittedLotId } as BarcodePayload,
       barcode_pdf_url: assetUrl(`/barcodes/${filename}`),
       barcode_pdf_base64: pdf.toString('base64'),
       status: 'MINTED',
