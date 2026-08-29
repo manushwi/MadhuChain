@@ -122,7 +122,7 @@ export async function getBatch(req: Request, res: Response, next: NextFunction):
   try {
     const batch = await prisma.batch.findUnique({
       where: { batchId: req.params.id },
-      include: { hives: true, qualityTests: true, processingLog: true, jarSerials: true, ownershipTransfer: true },
+      include: { hives: true, qualityTests: true, processingLog: true, jarSerials: true, ownershipTransfer: true, blends: true },
     });
     if (!batch) {
       res.status(404).json({ error: 'Batch not found' });

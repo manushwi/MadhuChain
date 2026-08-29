@@ -256,3 +256,40 @@ func TestBatchHappyPathToRelease(t *testing.T) {
 		t.Fatalf("expected RELEASED after final test, got %s", b.State)
 	}
 }
+
+// TestProcessingLogNormalizedForSchema ensures every ProcessingAction read from
+// GetBatch exposes non-nil slice/map fields; the contract API response schema
+// rejects null parentLotIds / parentQuantities / parameters (regression: v1.3).
+func TestProcessingLogNormalizedForSchema(t *testing.T) {
+	cc := NewHoneyChainContract()
+	ctx := newCtx(RoleBeekeeper)
+	mint(t, cc, ctx, "B5")
+
+	setRole(ctx, RoleTransporter)
+	if err := cc.RecordReceived(ctx, "B5", "transporter-1", 18.0); err != nil {
+		t.Fatalf("received failed: %v", err)
+	}
+	setRole(ctx, RoleFactoryWorker)
+	if err := cc.RecordProcessingAction(ctx, "B5", "heating", `{"target":"45"}`, "op-1", "eq-1", 18.0, 17.0); err != nil {
+		t.Fatalf("processing action failed: %v", err)
+	}
+
+	b, err := cc.GetBatch(ctx, "B5")
+	if err != nil {
+		t.Fatalf("GetBatch failed: %v", err)
+	}
+	if len(b.ProcessingLog) == 0 {
+		t.Fatalf("expected processing log entry")
+	}
+	for _, a := range b.ProcessingLog {
+		if a.Parameters == nil {
+			t.Error("parameters map is nil after normalize")
+		}
+		if a.ParentLotIDs == nil {
+			t.Error("parentLotIds slice is nil after normalize")
+		}
+		if a.ParentQuantities == nil {
+			t.Error("parentQuantities map is nil after normalize")
+		}
+	}
+}
