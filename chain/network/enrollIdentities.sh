@@ -8,7 +8,11 @@
 #
 # The test-network org CA (org1) grants its bootstrap `admin` full registrar
 # attributes (hf.Registrar.Attributes=*), so registering users with the custom
-# `role` ecert attribute is permitted.
+# `role` ecert attribute is permitted. The admin client must itself be enrolled
+# before it can register identities, so the script enrolls it into ./caadmin.
+#
+# NOTE: The CA's bootstrap identity is named `admin` (no role attribute), so the
+# Admin role uses a separate CA identity 'honeyadmin' to carry role=Admin.
 #
 # Requires the network to be up with a CA (./up.sh up -ca).
 #
@@ -28,31 +32,43 @@ ADMIN_PW="adminpw"
 TLS_CERT="$TEST_NET/organizations/fabric-ca/org1/tls-cert.pem"
 
 OUT="$SCRIPT_DIR/identities"
+ADMIN_HOME="$SCRIPT_DIR/caadmin"
 
 if [ ! -f "$TLS_CERT" ]; then
   echo "CA TLS cert not found at $TLS_CERT. Run ./bootstrap.sh && ./up.sh up -ca first." >&2
   exit 1
 fi
 
-# Enroll a new role identity.
+# The registrar (admin) must be enrolled before it can register identities.
+echo "==> Enrolling CA registrar '$ADMIN_USER'"
+mkdir -p "$ADMIN_HOME"
+export FABRIC_CA_CLIENT_HOME="$ADMIN_HOME"
+fabric-ca-client enroll -u "https://${ADMIN_USER}:${ADMIN_PW}@${CA_HOST}" \
+  --tls.certfiles "$TLS_CERT" 2>/dev/null || echo "  (registrar already enrolled)"
+
+# Enroll a role identity. $2 = CA identity id (defaults to lowercase role).
 enroll_role() {
   local role="$1"
-  local id="${role,,}" # lowercase, e.g. Beekeeper -> beekeeper
+  local id="${2:-${role,,}}"
+  local secret="${id}pw"
   local dir="$OUT/$role"
   local caAdminURL="https://${ADMIN_USER}:${ADMIN_PW}@${CA_HOST}"
-  local caUserURL="https://${id}:${id}pw@${CA_HOST}"
+  local caUserURL="https://${id}:${secret}@${CA_HOST}"
 
   echo "==> Registering identity '$id' with role=$role"
-
-  # Register the identity with the app.role attribute (idempotent).
-  fabric-ca-client register -u "$caAdminURL" \
+  local reg_out
+  reg_out="$(fabric-ca-client register -u "$caAdminURL" \
     --tls.certfiles "$TLS_CERT" \
     --id.name "$id" \
-    --id.secret "${id}pw" \
+    --id.secret "$secret" \
     --id.type client \
     --id.affiliation org1.department1 \
-    --id.attrs "role=${role}:ecert" >/dev/null 2>&1 \
-    || echo "  (identity '$id' may already be registered; continuing)"
+    --id.attrs "role=${role}:ecert" 2>&1)" || {
+    case "$reg_out" in
+      *"already registered"*) echo "  (identity '$id' already registered; continuing)" ;;
+      *) echo "$reg_out" >&2; exit 1 ;;
+    esac
+  }
 
   echo "==> Enrolling identity '$id' into $dir"
   mkdir -p "$dir"
@@ -64,15 +80,13 @@ enroll_role() {
   echo "  -> enrolled $dir"
 }
 
-mkdir -p "$OUT"
-
 enroll_role "Beekeeper"
 enroll_role "Transporter"
 enroll_role "LabTech"
 enroll_role "FactoryWorker"
 enroll_role "QCManager"
 enroll_role "Distributor"
-enroll_role "Admin"
+enroll_role "Admin" "honeyadmin"
 
 echo "==> Identity enrollment complete. See $OUT"
 ls -1 "$OUT"

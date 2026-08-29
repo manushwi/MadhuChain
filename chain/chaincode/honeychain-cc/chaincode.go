@@ -3,9 +3,10 @@ HoneyChain chaincode - Hyperledger Fabric contract for honey
 batch lifecycle, custody and anti-adulteration fraud checks.
 
 Batch state machine:
-  RECEIVED -> INTAKE TEST -> PROCESSING -> OUTPUT TEST -> PACKAGING -> FINAL QC -> RELEASED
-  Any stage may transition to FLAGGED (blocks PROGRESS mailbox past the flag)
-  unless cleared by a QC Manager.
+
+	RECEIVED -> INTAKE TEST -> PROCESSING -> OUTPUT TEST -> PACKAGING -> FINAL QC -> RELEASED
+	Any stage may transition to FLAGGED (blocks PROGRESS mailbox past the flag)
+	unless cleared by a QC Manager.
 */
 package main
 
@@ -28,83 +29,83 @@ const (
 	StateFlagged    = "FLAGGED"
 
 	// Roles
-	RoleBeekeeper    = "Beekeeper"
-	RoleTransporter  = "Transporter"
-	RoleLabTech      = "LabTech"
+	RoleBeekeeper     = "Beekeeper"
+	RoleTransporter   = "Transporter"
+	RoleLabTech       = "LabTech"
 	RoleFactoryWorker = "FactoryWorker"
-	RoleQCManager    = "QCManager"
-	RoleDistributor  = "Distributor"
-	RoleAdmin        = "Admin"
+	RoleQCManager     = "QCManager"
+	RoleDistributor   = "Distributor"
+	RoleAdmin         = "Admin"
 )
 
 // QualityTestThresholds define the maximum tolerated drift between
 // Intake and Output test results before a batch is auto-flagged.
 type QualityTestThresholds struct {
-	MoistureDelta   float64 `json:"moistureDelta"`   // absolute percentage point drift
-	HMFDelta        float64 `json:"hmfDelta"`        // mg/kg drift
-	DiastaseDelta   float64 `json:"diastaseDelta"`   // DN units drift
+	MoistureDelta     float64 `json:"moistureDelta"`     // absolute percentage point drift
+	HMFDelta          float64 `json:"hmfDelta"`          // mg/kg drift
+	DiastaseDelta     float64 `json:"diastaseDelta"`     // DN units drift
 	SugarProfileDelta float64 `json:"sugarProfileDelta"` // any single sugar component % drift
-	IsotopeDelta    float64 `json:"isotopeDelta"`    // delta-13C permil drift
+	IsotopeDelta      float64 `json:"isotopeDelta"`      // delta-13C permil drift
 }
 
 // QualityTest models the lab panel for a given stage.
 type QualityTest struct {
-	Stage       string  `json:"stage"`
-	BatchID     string  `json:"batchId"`
-	Moisture    float64 `json:"moisture"`
-	HMF         float64 `json:"hmf"`
-	Diastase    float64 `json:"diastase"`
+	Stage        string             `json:"stage"`
+	BatchID      string             `json:"batchId"`
+	Moisture     float64            `json:"moisture"`
+	HMF          float64            `json:"hmf"`
+	Diastase     float64            `json:"diastase"`
 	SugarProfile map[string]float64 `json:"sugarProfile"` // fructose, glucose, sucrose
-	IsotopeRatio float64 `json:"isotopeRatio"` // delta-13C
-	TesterID    string  `json:"testerId"`
-	Timestamp   int64   `json:"timestamp"`
+	IsotopeRatio float64            `json:"isotopeRatio"` // delta-13C
+	TesterID     string             `json:"testerId"`
+	Timestamp    int64              `json:"timestamp"`
 }
 
 // ProcessingAction models a single processing step.
 type ProcessingAction struct {
-	ActionType   string            `json:"actionType"` // heating, filtering, blending
-	Parameters   map[string]string `json:"parameters"`
-	OperatorID   string            `json:"operatorId"`
-	EquipmentID  string            `json:"equipmentId"`
-	WeightBefore float64           `json:"weightBefore"`
-	WeightAfter  float64           `json:"weightAfter"`
-	ParentLotIDs []string          `json:"parentLotIds"` // required when actionType=blending
+	ActionType       string             `json:"actionType"` // heating, filtering, blending
+	Parameters       map[string]string  `json:"parameters"`
+	OperatorID       string             `json:"operatorId"`
+	EquipmentID      string             `json:"equipmentId"`
+	WeightBefore     float64            `json:"weightBefore"`
+	WeightAfter      float64            `json:"weightAfter"`
+	ParentLotIDs     []string           `json:"parentLotIds"`     // required when actionType=blending
 	ParentQuantities map[string]float64 `json:"parentQuantities"` // lotId -> weight
-	Timestamp    int64              `json:"timestamp"`
+	Timestamp        int64              `json:"timestamp"`
 }
 
 // BlendComposition records the source lot breakdown for a blended batch.
 type BlendComposition struct {
-	SourceLotID  string  `json:"sourceLotId"`
-	WeightKg     float64 `json:"weightKg"`
-	Percentage   float64 `json:"percentage"`
+	SourceLotID string  `json:"sourceLotId"`
+	WeightKg    float64 `json:"weightKg"`
+	Percentage  float64 `json:"percentage"`
 }
 
 // Batch is the core ledger asset.
 type Batch struct {
-	BatchID       string                 `json:"batchId"`
-	LotID         string                 `json:"lotId"`
-	HiveIDs       []string               `json:"hiveIds,omitempty"`
-	HarvestStart  string                 `json:"harvestStart,omitempty"`
-	HarvestEnd    string                 `json:"harvestEnd,omitempty"`
-	State         string                 `json:"state"`
-	DataHash      string                 `json:"dataHash,omitempty"`
-	BarcodePayload map[string]interface{} `json:"barcodePayload,omitempty"`
-	WeightKg      float64                `json:"weightKg"`
-	IntakeWeight  float64                `json:"intakeWeight,omitempty"`
-	OutputWeight  float64                `json:"outputWeight,omitempty"`
-	JarCount      int                    `json:"jarCount,omitempty"`
-	JarSerials    []string               `json:"jarSerials,omitempty"`
-	QualityTests  map[string]*QualityTest `json:"qualityTests,omitempty"` // keyed by stage
-	ProcessingLog []*ProcessingAction    `json:"processingLog,omitempty"`
-	BlendSources  []*BlendComposition    `json:"blendSources,omitempty"`
-	TransporterID string                 `json:"transporterId,omitempty"`
-	Flagged       bool                   `json:"flagged"`
-	FlagReason    string                 `json:"flagReason,omitempty"`
-	FlagResolution string                `json:"flagResolution,omitempty"`
-	OwnerID       string                 `json:"ownerId"`
-	CreatedAt     int64                  `json:"createdAt"`
-	UpdatedAt     int64                  `json:"updatedAt"`
+	BatchID        string                  `json:"batchId"`
+	LotID          string                  `json:"lotId"`
+	HiveIDs        []string                `json:"hiveIds"`
+	HarvestStart   string                  `json:"harvestStart"`
+	HarvestEnd     string                  `json:"harvestEnd"`
+	State          string                  `json:"state"`
+	DataHash       string                  `json:"dataHash"`
+	BarcodePayload map[string]interface{}  `json:"barcodePayload"`
+	WeightKg       float64                 `json:"weightKg"`
+	IntakeWeight   float64                 `json:"intakeWeight"`
+	OutputWeight   float64                 `json:"outputWeight"`
+	JarCount       int                     `json:"jarCount"`
+	JarSerials     []string                `json:"jarSerials"`
+	QualityTests   map[string]*QualityTest `json:"qualityTests"` // keyed by stage
+	ProcessingLog  []*ProcessingAction     `json:"processingLog"`
+	BlendSources   []*BlendComposition     `json:"blendSources"`
+	TransporterID  string                  `json:"transporterId"`
+	Flagged        bool                    `json:"flagged"`
+	FlagReason     string                  `json:"flagReason"`
+	FlagResolution string                  `json:"flagResolution"`
+	OwnerID        string                  `json:"ownerId"`
+	CreatedAt      int64                   `json:"createdAt"`
+	UpdatedAt      int64                   `json:"updatedAt"`
 }
 
 // HoneyChainContract implements the Fabric contract.
@@ -117,11 +118,11 @@ type HoneyChainContract struct {
 func NewHoneyChainContract() *HoneyChainContract {
 	return &HoneyChainContract{
 		Thresholds: QualityTestThresholds{
-			MoistureDelta:    0.5,  // 0.5 percentage points
-			HMFDelta:         8.0,  // mg/kg
-			DiastaseDelta:    3.0,  // DN/L
+			MoistureDelta:     0.5, // 0.5 percentage points
+			HMFDelta:          8.0, // mg/kg
+			DiastaseDelta:     3.0, // DN/L
 			SugarProfileDelta: 0.3, // 0.3 percentage points per component
-			IsotopeDelta:     0.3,  // per-mil
+			IsotopeDelta:      0.3, // per-mil
 		},
 	}
 }
@@ -168,11 +169,41 @@ func (c *HoneyChainContract) getBatch(ctx contractapi.TransactionContextInterfac
 	if err := json.Unmarshal(bytes, batch); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal batch %s: %w", batchID, err)
 	}
-	// Rehydrate maps that may have been omitted from stored JSON.
+	c.normalizeBatch(batch)
+	return batch, nil
+}
+
+// normalizeBatch ensures slice/map fields are never nil before the response is
+// validated (contract-api validates the JSON against the struct's schema).
+func (c *HoneyChainContract) normalizeBatch(batch *Batch) {
+	if batch.HiveIDs == nil {
+		batch.HiveIDs = []string{}
+	}
+	if batch.BarcodePayload == nil {
+		batch.BarcodePayload = map[string]interface{}{}
+	}
+	if batch.JarSerials == nil {
+		batch.JarSerials = []string{}
+	}
 	if batch.QualityTests == nil {
 		batch.QualityTests = map[string]*QualityTest{}
 	}
-	return batch, nil
+	if batch.ProcessingLog == nil {
+		batch.ProcessingLog = []*ProcessingAction{}
+	}
+	if batch.BlendSources == nil {
+		batch.BlendSources = []*BlendComposition{}
+	}
+	for _, action := range batch.ProcessingLog {
+		if action != nil && action.Parameters == nil {
+			action.Parameters = map[string]string{}
+		}
+	}
+	for _, qt := range batch.QualityTests {
+		if qt != nil && qt.SugarProfile == nil {
+			qt.SugarProfile = map[string]float64{}
+		}
+	}
 }
 
 func (c *HoneyChainContract) putBatch(ctx contractapi.TransactionContextInterface, batch *Batch) error {
@@ -388,6 +419,8 @@ func (c *HoneyChainContract) MintBatch(
 		CreatedAt:      c.now(ctx),
 		UpdatedAt:      c.now(ctx),
 	}
+
+	c.normalizeBatch(batch)
 
 	if err := c.putBatch(ctx, batch); err != nil {
 		return nil, err

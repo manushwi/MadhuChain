@@ -210,7 +210,6 @@ export async function blend(req: Request, res: Response, next: NextFunction): Pr
     );
 
     const blends = data.sources.map((s) => ({
-      blendBatchId: newBatchId,
       sourceLotId: s.lot_id,
       weightKg: s.weight_kg,
       percentage: (s.weight_kg / data.weight_kg) * 100,

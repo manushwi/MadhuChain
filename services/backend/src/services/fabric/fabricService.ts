@@ -59,8 +59,16 @@ export class FabricService {
     const peer = ccp.peers[peerName];
     const tlsRootCert = Buffer.from(peer.tlsCACerts.pem);
     const tlsCredentials = grpc.credentials.createSsl(tlsRootCert);
-    const peerEndpoint = endpointFromUrl(peer.url, config.FABRIC_PEER_HOST_ALIAS);
-    const client = new grpc.Client(peerEndpoint, tlsCredentials);
+    // Dial the URL host (e.g. localhost:7051) but present the peer's
+    // hostname as the TLS server name so the peer's cert verifies.
+    const peerEndpoint = endpointFromUrl(peer.url);
+    const channelOptions: grpc.ChannelOptions = config.FABRIC_PEER_HOST_ALIAS
+      ? {
+          'grpc.ssl_target_name_override': config.FABRIC_PEER_HOST_ALIAS,
+          'grpc.default_authority': config.FABRIC_PEER_HOST_ALIAS,
+        }
+      : {};
+    const client = new grpc.Client(peerEndpoint, tlsCredentials, channelOptions);
 
     const identity: Identity = {
       mspId: config.FABRIC_MSP_ID,
@@ -135,11 +143,10 @@ export class FabricService {
   }
 }
 
-function endpointFromUrl(url: string, hostAlias?: string): string {
+function endpointFromUrl(url: string): string {
   const clean = url.replace(/^grpcs?:\/\//, '');
   const [host, port] = clean.split(':');
-  const endpointHost = hostAlias ?? host;
-  return `${endpointHost}:${port ?? '7051'}`;
+  return `${host}:${port ?? '7051'}`;
 }
 
 export const fabricService = new FabricService();
