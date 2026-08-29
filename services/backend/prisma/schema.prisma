@@ -131,7 +131,6 @@ model Lot {
 
   batch    Batch?           @relation(fields: [batchId], references: [batchId])
   supplier Supplier?        @relation(fields: [supplierId], references: [supplierId])
-  blendOut BlendComposition[]
 }
 
 // A production batch. Its on-chain record is the source of truth for state;
@@ -251,7 +250,6 @@ model BlendComposition {
   percentage   Float
 
   blendBatch Batch @relation("BlendOut", fields: [blendBatchId], references: [batchId], onDelete: Cascade)
-  sourceLot  Lot  @relation(fields: [sourceLotId], references: [lotId])
 
   @@index([blendBatchId])
 }

@@ -43,6 +43,7 @@ chain/network/channel-artifacts/
 chain/network/*.tar.gz
 chain/network/fabric-samples/
 chain/network/identities/
+chain/network/caadmin/
 
 # Backend runtime artifacts
 services/backend/barcodes/
