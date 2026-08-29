@@ -115,6 +115,20 @@ curl -s localhost:4000/api/verify/BATCH-001-JAR-0001 -H "$AUTH"
 
 Chain state flow: `RECEIVED → INTAKE_TEST → PROCESSING → OUTPUT_TEST → PACKAGING → FINAL_QC → RELEASED`, with `FLAGGED` set when fraud/QC checks trip (compositional drift, mass-balance mismatch, jar-weight reconciliation). A `clear-flag` with `CLEARED` resumes at `PROCESSING`.
 
+### End-to-end smoke test
+
+`scripts/e2e-chain.sh` drives the entire lifecycle into the ledger through the REST
+API — mint → received → intake → processing → deliberately-bad output test (asserts
+`flagged=true`) → QC clear → output → packaging → final → `RELEASED`, then consumer
+verify of a jar and a mass-balanced blend — and fails the script on any assertion
+mismatch.
+
+```bash
+PATH="$PWD/../../chain/network/fabric-samples/bin:$PATH" bash scripts/e2e-chain.sh
+```
+
+Requires a running backend + Fabric network + seeded DB (see Setup).
+
 ## Layout
 
 - `src/routes/` – REST handlers (auth, hives, sensorData, batches, factory, verify, alerts, profile)
