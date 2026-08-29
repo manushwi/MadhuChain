@@ -216,6 +216,7 @@ func (c *HoneyChainContract) normalizeBatch(batch *Batch) {
 }
 
 func (c *HoneyChainContract) putBatch(ctx contractapi.TransactionContextInterface, batch *Batch) error {
+	c.normalizeBatch(batch)
 	batch.UpdatedAt = c.now(ctx)
 	bytes, err := json.Marshal(batch)
 	if err != nil {
