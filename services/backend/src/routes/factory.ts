@@ -215,17 +215,23 @@ export async function blend(req: Request, res: Response, next: NextFunction): Pr
       percentage: (s.weight_kg / data.weight_kg) * 100,
     }));
 
-    await prisma.batch.create({
-      data: {
-        batchId: newBatchId,
-        lotId: newLotId,
-        state: 'PROCESSING',
-        weightKg: data.weight_kg,
-        sensorDataHash: 'blend-hash',
-        barcodePayload: payload as any,
-        blends: { create: blends },
-      },
-    });
+    // Store off-chain record (mirror only - never fatal: the blend is already
+    // committed on-chain by BlendBatch above).
+    try {
+      await prisma.batch.create({
+        data: {
+          batchId: newBatchId,
+          lotId: newLotId,
+          state: 'PROCESSING',
+          weightKg: data.weight_kg,
+          sensorDataHash: 'blend-hash',
+          barcodePayload: payload as any,
+          blends: { create: blends },
+        },
+      });
+    } catch (e) {
+      console.error(`[blend] on-chain batch ${newBatchId} committed but DB mirror failed`, e);
+    }
 
     res.status(201).json({ batch_id: newBatchId, lot_id: newLotId, sources: data.sources, tx: parseTxResult(result) });
   } catch (e) {
