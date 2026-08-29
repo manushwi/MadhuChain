@@ -195,8 +195,17 @@ func (c *HoneyChainContract) normalizeBatch(batch *Batch) {
 		batch.BlendSources = []*BlendComposition{}
 	}
 	for _, action := range batch.ProcessingLog {
-		if action != nil && action.Parameters == nil {
+		if action == nil {
+			continue
+		}
+		if action.Parameters == nil {
 			action.Parameters = map[string]string{}
+		}
+		if action.ParentLotIDs == nil {
+			action.ParentLotIDs = []string{}
+		}
+		if action.ParentQuantities == nil {
+			action.ParentQuantities = map[string]float64{}
 		}
 	}
 	for _, qt := range batch.QualityTests {
