@@ -40,6 +40,13 @@ chain/chaincode/**/*.exe
 chain/network/organizations/
 chain/network/scripts/**/*.log
 chain/network/channel-artifacts/
+chain/network/*.tar.gz
+chain/network/fabric-samples/
+chain/network/identities/
+
+# Backend runtime artifacts
+services/backend/barcodes/
+services/backend/identities/
 
 # OS
 .DS_Store
