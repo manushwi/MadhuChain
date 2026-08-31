@@ -1,8 +1,14 @@
-# HoneyChain — Hyperledger Fabric Network (2 orgs, local)
+# HoneyChain — Hyperledger Fabric Network (3 orgs, local)
 
 Brings up a permissioned Hyperledger Fabric network for development and pilot:
-**2 orgs (`Org1` + `Org2`), 1 peer each, 1 orderer (Raft)**, channel
-`honeychain-channel`, smart contract `honeychain-cc` (Go).
+**3 orgs, 1 peer each, 1 orderer (Raft)**, channel `honeychannel`, and
+smart contract `honeychain` (Go).
+
+| MSP | HoneyChain organization |
+|---|---|
+| `Org1MSP` | KVIC |
+| `Org2MSP` | Collection / Factory |
+| `Org3MSP` | Certified Lab |
 
 The backend (`services/backend`) connects to this network via the
 `@hyperledger/fabric-gateway` SDK. **The backend is the only component that ever
@@ -28,8 +34,8 @@ talks to Fabric** — all apps talk to the backend over REST.
 ./deployChaincode.sh
 ```
 
-This creates `honeychain-channel` with `Org1` and packages / approves / commits
-the Go chaincode `honeychain-cc` (`chain/chaincode/honeychain-cc`).
+This creates `honeychannel`, adds Org3, and deploys the Go chaincode
+`honeychain` from `chain/chaincode/honeychain-cc`.
 
 ### Redeploy after chaincode changes
 
@@ -39,8 +45,11 @@ From `fabric-samples/test-network`, with `git-bash`/MSYS on Windows:
 ```bash
 cd fabric-samples/test-network
 
-# Windows/git-bash specifics (all four matter):
+# Windows/git-bash specifics (all matter; the ENV_CONV_EXCL vars stop MSYS from
+# rewriting DOCKER_SOCK=/var/run/docker.sock into "C:\Program Files\Git\var\..."):
 export MSYS_NO_PATHCONV=1
+export MSYS_ENV_CONV_EXCL='*'
+export MSYS2_ENV_CONV_EXCL='*'
 export PATH="$PWD/../bin:/c/Program Files/Go/bin:$PATH"      # peer CLI + jq + go (packager runs `go list`)
 export FABRIC_CFG_PATH='D:/Honeychain/chain/network/fabric-samples/config'   # core.yaml dir, Windows form
 export TEST_NETWORK_HOME="$(cygpath -w "$PWD")"              # Windows-form so envVar.sh paths are absolute
@@ -77,9 +86,8 @@ attribute. The backend signs transaction custodially under these identities.
 ./enrollIdentities.sh
 ```
 
-This registers + enrolls an identity per role (Beekeeper, Transporter, LabTech,
-FactoryWorker, QCManager, Distributor, Admin) into `./identities/<role>/` with a
-`role=<role>` attribute baked into the X.509 cert. The backend reads these to sign.
+This enrolls Beekeeper/QC/Admin under Org1, Transporter/Factory/Distributor under
+Org2, and LabTech under Org3. Each certificate carries its application role.
 
 ## Tear down
 
@@ -91,16 +99,14 @@ FactoryWorker, QCManager, Distributor, Admin) into `./identities/<role>/` with a
 
 | Function | Role | Purpose |
 |---|---|---|
-| `MintBatch` | Beekeeper | Harvest → batch genesis + barcode payload |
-| `RecordIntake` | Transporter/FactoryWorker | GRN for incoming raw material |
-| `RecordReceived` | Transporter | Log arrival + incoming weight |
-| `RecordQualityTest` | LabTech | Intake/Output/Final test; Output auto-runs fraud checks |
-| `RecordProcessingAction` | FactoryWorker | Heating/filtering/blending step |
-| `RecordPackaging` | FactoryWorker | Jar count → jar-serial generation + weight reconciliation |
-| `BlendBatch` | FactoryWorker | Many-to-one blend with mass-balance |
-| `TransferOwnership` | Current holder | Custody transfer |
-| `ClearFlag` | QCManager | Clear/reject a flagged batch |
-| `GetBatch` / `GetJar` | Any | Read queries |
+| `CreateHarvestBatch` | KVIC Beekeeper | Anchor hive, beekeeper, and harvest hashes |
+| `RecordCollection` | Factory | Anchor accepted/rejected collection record |
+| `RecordLabResult` | Certified Lab | Anchor certificate hash and approval result |
+| `RecordProcessing` | Factory | Anchor processing record hash |
+| `RecordPackaging` | Factory | Anchor packaging and bottle-summary hashes |
+| `TransferCustody` | Current custodian | Record MSP-to-MSP custody proof |
+| `RevokeBatch` | KVIC | Revoke a batch using a reason hash |
+| `GetBatch` / histories | Any channel member | Read proof records |
 
 See `docs/` (PRD, system-plan, processing-chain) for the full business rules. The
 chaincode's `normalizeBatch` (called from `putBatch` + `getBatch` since v1.4)

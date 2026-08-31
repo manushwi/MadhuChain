@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import { config } from '../config.js';
-
 /**
  * Custodial identity management (Coinbase-style).
  *
@@ -23,6 +22,21 @@ const MASTER_KEY: Buffer =
 /** Derive the Fabric enrollment user id for a given role. */
 export function fabricUserForRole(role: string): string {
   return role.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Generate a unique, human-readable per-operator traceability id.
+ * Distinct per person (unlike fabricUserForRole, which is shared by role).
+ * Format: "<role>_<8-char alphanumeric>" e.g. "TRANSPORTER_8f3k2aQ7".
+ */
+export function generateOperatorId(role: string): string {
+  const prefix = role.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const suffix = crypto
+    .randomBytes(12)
+    .toString('base64')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .slice(0, 8);
+  return `${prefix}_${suffix}`;
 }
 
 /** Encrypt a private key (PEM) at rest using AES-256-GCM. */

@@ -24,13 +24,13 @@ export default function HiveMap({ hives }: HiveMapProps) {
           Interactive map is available in the mobile app
         </Text>
       </View>
-      {hives.map((h, i) => (
+      {hives.filter((h) => h.location).map((h, i) => (
         <View key={h.id} style={styles.row}>
           <Text variant="bodySmall" style={{ color: c.primaryDark }}>
             {i + 1}. {h.name}
           </Text>
           <Text variant="labelSmall" style={{ color: c.muted }}>
-            {h.location.latitude.toFixed(4)}, {h.location.longitude.toFixed(4)}
+            {h.location!.latitude.toFixed(4)}, {h.location!.longitude.toFixed(4)}
           </Text>
         </View>
       ))}

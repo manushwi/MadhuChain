@@ -1,98 +1,159 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { router, Stack, useFocusEffect } from 'expo-router';
+import { useRemote } from '@/src/hooks/use-remote';
+import { listBatches } from '@/src/api/batches';
+import { Screen, NeuInput, t } from '@/src/theme/primitives';
+import { palette } from '@/src/theme/palette';
+import { BatchCard } from '@/src/components/BatchCard';
+import { EmptyState, ErrorState, LoadingState } from '@/src/components/cards';
+import { useAuth } from '@/src/context/AuthContext';
+import { can, isRoleWork, ROLE_LABELS } from '@/src/auth/capabilities';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+type Filter = 'ALL' | 'WORK' | 'INPROGRESS' | 'RELEASED' | 'FLAGGED';
 
-export default function HomeScreen() {
+const FILTERS: Filter[] = ['WORK', 'ALL', 'INPROGRESS', 'RELEASED', 'FLAGGED'];
+
+export default function DashboardScreen() {
+  const { user, logout } = useAuth();
+  const { data, error, loading, refetch } = useRemote(listBatches, `hc.factory.${user?.id}.batches`);
+  const [filter, setFilter] = useState<Filter>(user?.role === 'ADMIN' ? 'ALL' : 'WORK');
+  const [q, setQ] = useState('');
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
+
+  const batches = useMemo(() => {
+    const list = data ?? [];
+    const needle = q.trim().toLowerCase();
+    return list.filter((b) => {
+       const inProgress = ['RECEIVED', 'INTAKE_TEST', 'PROCESSING', 'OUTPUT_TEST', 'PACKAGING', 'FLAGGED'].includes(b.state);
+       if (filter === 'WORK' && user && !isRoleWork(user.role, b.state, b.flagged)) return false;
+      if (filter === 'INPROGRESS' && !inProgress) return false;
+      if (filter === 'RELEASED' && b.state !== 'RELEASED') return false;
+      if (filter === 'FLAGGED' && !b.flagged) return false;
+      if (needle && !`${b.batchId} ${b.lotId ?? ''}`.toLowerCase().includes(needle)) return false;
+      return true;
+    });
+  }, [data, filter, q, user]);
+
+  const workCount = user ? (data ?? []).filter((b) => isRoleWork(user.role, b.state, b.flagged)).length : 0;
+
+  if (error && !data) return <ErrorState message={error} onRetry={refetch} />;
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
+    <Screen>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable
+              onPress={() => {
+                logout();
+              }}
+              hitSlop={12}
+              style={styles.logout}
+            >
+              <Text style={styles.logoutText}>Sign out</Text>
+            </Pressable>
+          ),
+        }}
+      />
+      <FlatList
+        data={batches}
+        keyExtractor={(b) => b.batchId}
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={refetch} tintColor={palette.accentDeep} />}
+        ListHeaderComponent={
+          <View style={{ gap: 14 }}>
+            <View style={{ gap: 3 }}>
+              <Text style={t.h1}>{user ? ROLE_LABELS[user.role] : 'Operations'}</Text>
+              <Text style={t.small}>{user?.role === 'ADMIN' ? 'Read-only lifecycle and quality oversight' : `${workCount} batch${workCount === 1 ? '' : 'es'} in your work queue`}</Text>
+            </View>
+            {user ? (
+              <View style={styles.sessionRow}>
+                <Text style={styles.sessionName}>{user.name}</Text>
+                <Text style={[styles.sessionPill, { color: palette.accentDeep }]}>{user.role}</Text>
+              </View>
+            ) : null}
+            <NeuInput
+              label="search"
+              hint="batch id or lot id"
+              value={q}
+              onChangeText={setQ}
+              autoCapitalize="characters"
+              autoCorrect={false}
             />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+              {FILTERS.filter((f) => !(f === 'WORK' && user?.role === 'ADMIN')).map((f) => {
+                const active = filter === f;
+                return (
+                  <Pressable key={f} onPress={() => setFilter(f)} style={[styles.chip, active && styles.chipActive]}>
+                    <Text style={[styles.chipText, active && { color: palette.onAccent }]}>{f === 'WORK' ? 'MY WORK' : f}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={[t.small, { marginTop: 2 }]}>
+              {batches.length} batch{batches.length === 1 ? '' : 'es'}
+              {data && batches.length !== data.length ? ` of ${data.length}` : ''} · tap a card for detail
+            </Text>
+          </View>
+        }
+        ListEmptyComponent={
+          loading ? <LoadingState /> : <EmptyState message={q || filter !== 'ALL' ? 'No batches match this filter.' : 'No batches on the ledger yet.'} />
+        }
+        renderItem={({ item }) => (
+          <BatchCard batch={item} onPress={() => router.push(`/batch/${item.batchId}`)} />
+        )}
+        ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
+      />
+      {can(user?.role, 'blend') ? (
+        <Pressable accessibilityRole="button" onPress={() => router.push('/blend/create')} style={[styles.fab, { bottom: 96, backgroundColor: palette.surface }]}>
+          <Text style={[styles.fabText, { color: palette.accentDeep }]}>New blend</Text>
+        </Pressable>
+      ) : null}
+      <Pressable accessibilityRole="button" onPress={() => router.push('/scan')} style={styles.fab}>
+        <Text style={styles.fabText}>Scan</Text>
+      </Pressable>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  list: { padding: 16, paddingBottom: 110 },
+  chip: {
+    borderRadius: 999,
+    backgroundColor: palette.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: palette.edgeDark,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  chipActive: { backgroundColor: palette.accentDeep },
+  chipText: { fontFamily: 'System', fontWeight: '700', fontSize: 12, color: palette.darkSoft, letterSpacing: 0.4 },
+  fab: {
     position: 'absolute',
+    right: 20,
+    bottom: 26,
+    backgroundColor: palette.accentBright,
+    borderRadius: 999,
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    minHeight: 48,
+    justifyContent: 'center',
+    shadowColor: palette.edgeDark,
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 6,
   },
+  fabText: { fontFamily: 'System', fontWeight: '800', fontSize: 15, color: palette.onAccent, letterSpacing: 0.5 },
+  logout: { paddingHorizontal: 4, paddingVertical: 2 },
+  logoutText: { fontFamily: 'System', fontWeight: '700', fontSize: 14, color: palette.accentDeep },
+  sessionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  sessionName: { fontFamily: 'System', fontWeight: '700', fontSize: 14, color: palette.dark },
+  sessionPill: { fontFamily: 'System', fontWeight: '800', fontSize: 11, letterSpacing: 0.6 },
 });

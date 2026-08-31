@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
-# HoneyChain - bring up a single-org Hyperledger Fabric test network.
+# HoneyChain - bring up the Org1/KVIC and Org2/Factory base network.
 #
-# This wraps fabric-samples/test-network running with ONE peer org (Org1).
-# The network uses channel 'honeychain-channel' (created by deployChaincode.sh).
+# deployChaincode.sh creates honeychannel and adds Org3/Certified Lab before
+# deploying the honeychain contract.
 #
 # Usage: ./up.sh [up|up -ca|down]
 #   up       - start peers + orderer (no CA)
 #   up -ca   - also start the Fabric CA (needed to enroll per-role identities)
 #   down     - tear the network down
 set -euo pipefail
+
+# Keep Docker's Linux socket path unchanged while allowing Fabric's native
+# Windows binaries to receive normal /d/... path conversion.
+export MSYS_ENV_CONV_EXCL='DOCKER_SOCK'
+export MSYS2_ENV_CONV_EXCL='DOCKER_SOCK'
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEST_NET="$SCRIPT_DIR/fabric-samples/test-network"
 
@@ -21,9 +27,9 @@ cd "$TEST_NET"
 
 case "${1:-up}" in
   up)
-    echo "==> Starting 1-org Fabric test network"
+    echo "==> Starting Fabric base network (Org1/KVIC + Org2/Factory)"
     ./network.sh up -ca -s couchdb
-    echo "==> Network up. Organizations: Org1"
+    echo "==> Base network up. Run ./deployChaincode.sh to create honeychannel and add Org3/Lab."
     ;;
   down)
     echo "==> Tearing down the network"

@@ -17,24 +17,34 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String?   @unique
-  phone         String?   @unique
-  passwordHash  String
-  role          Role
-  apiaryName    String?
-  location      String?
-  gpsLat        Float?
-  gpsLng        Float?
-  fabricUserID  String? // Custodial Fabric enrollment role identity (e.g. "beekeeper"); multiple app users share the role identity on-chain
-  encryptedKey  String?          // AES-GCM encrypted Fabric private key (custodial)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String     @id @default(cuid())
+  name           String
+  email          String?    @unique
+  phone          String?    @unique
+  passwordHash   String
+  role           Role
+  organizationId String?
+  status         UserStatus @default(ACTIVE)
+  lastLoginAt    DateTime?
+  apiaryName     String?
+  location       String?
+  gpsLat         Float?
+  gpsLng         Float?
+  beeSpecies     String? // bee breed the beekeeper keeps (indian hive, italian, ...)
+  nectarSource   String? // primary floral/nectar source (neem, sunflower, eucalyptus, ...)
+  fabricUserID   String? // Custodial Fabric enrollment role identity (e.g. "beekeeper"); multiple app users share the role identity on-chain
+  operatorId     String?   @unique // Unique per-operator traceability id (e.g. "TRANSPORTER_8f3k2aQ7"); distinct per person
+  encryptedKey   String? // AES-GCM encrypted Fabric private key (custodial)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
-  hives       Hive[]
-  batches     Batch[]
-  profile     Profile?
+  hives        Hive[]
+  batches      Batch[]
+  profile      Profile?
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([role, status])
 }
 
 enum Role {
@@ -48,12 +58,45 @@ enum Role {
   CONSUMER
 }
 
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+model Organization {
+  id             String             @id @default(cuid())
+  organizationId String             @unique
+  name           String
+  type           OrganizationType
+  mspId          String?            @unique
+  status         OrganizationStatus @default(ACTIVE)
+  jurisdiction   Json?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  users User[]
+}
+
+enum OrganizationType {
+  KVIC
+  FACTORY
+  LAB
+  DISTRIBUTOR
+  RETAILER
+  REGULATOR
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+}
+
 model Profile {
-  id             String   @id @default(cuid())
-  userId         String   @unique
+  id                String @id @default(cuid())
+  userId            String @unique
   notificationPrefs Json?
-  appLanguage    String   @default("en")
-  user           User     @relation(fields: [userId], references: [id])
+  appLanguage       String @default("en")
+  user              User   @relation(fields: [userId], references: [id])
 }
 
 // ---------------------------------------------------------------------------
@@ -61,19 +104,22 @@ model Profile {
 // ---------------------------------------------------------------------------
 
 model Hive {
-  id            String   @id @default(cuid())
-  hiveId        String   @unique              // physical sensor hive_id, e.g. "H-014"
-  beekeeperId   String?
-  sensorNodeId  String?
-  location      String?
-  gpsLat        Float?
-  gpsLng        Float?
-  registeredAt  DateTime @default(now())
+  id           String   @id @default(cuid())
+  hiveId       String   @unique // physical sensor hive_id, e.g. "H-014"
+  beekeeperId  String?
+  name         String? // display name, e.g. "Hive 1 - Shade Grove"
+  sensorNodeId String?
+  location     String?
+  gpsLat       Float?
+  gpsLng       Float?
+  registeredAt DateTime @default(now())
 
-  beekeeper  User?          @relation(fields: [beekeeperId], references: [id])
-  readings   SensorReading[]
-  alerts     Alert[]
-  batches    BatchHive[]
+  beekeeper      User?             @relation(fields: [beekeeperId], references: [id])
+  readings       SensorReading[]
+  alerts         Alert[]
+  batches        BatchHive[]
+  featureWindows FeatureWindow[]
+  predictions    ModelPrediction[]
 
   @@index([beekeeperId])
 }
@@ -90,10 +136,10 @@ model SensorReading {
   batteryV Float?
 
   hive Hive @relation(fields: [hiveId], references: [hiveId], onDelete: Cascade)
+  // TimescaleDB hypertable created via raw SQL migration
 
   @@id([hiveId, ts])
   @@index([hiveId, ts(sort: Desc)])
-  // TimescaleDB hypertable created via raw SQL migration
 }
 
 // ---------------------------------------------------------------------------
@@ -101,13 +147,13 @@ model SensorReading {
 // ---------------------------------------------------------------------------
 
 model Supplier {
-  id          String   @id @default(cuid())
-  supplierId  String   @unique
+  id          String       @id @default(cuid())
+  supplierId  String       @unique
   name        String
   type        SupplierType // Platform | External
   contactInfo String?
-  trustTier   Int      @default(1)
-  createdAt   DateTime @default(now())
+  trustTier   Int          @default(1)
+  createdAt   DateTime     @default(now())
 
   lots Lot[]
 }
@@ -118,72 +164,155 @@ enum SupplierType {
 }
 
 model Lot {
-  id             String   @id @default(cuid())
-  lotId          String   @unique            // e.g. "HC-LOT-042"
-  batchId        String?                     // null for External-only declared lots
+  id             String       @id @default(cuid())
+  lotId          String       @unique // e.g. "HC-LOT-042"
+  batchId        String? // null for External-only declared lots
   supplierId     String?
   supplierType   SupplierType
   weightKg       Float
   deliveryDate   DateTime?
   declaredOrigin String?
   intakeTestId   String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime     @default(now())
 
-  batch    Batch?           @relation(fields: [batchId], references: [batchId])
-  supplier Supplier?        @relation(fields: [supplierId], references: [supplierId])
+  batch    Batch?    @relation(fields: [batchId], references: [batchId])
+  supplier Supplier? @relation(fields: [supplierId], references: [supplierId])
 }
 
 // A production batch. Its on-chain record is the source of truth for state;
 // this table mirrors/linkages for querying.
 model Batch {
-  id             String   @id @default(cuid())
-  batchId        String   @unique           // on-chain key
+  id             String    @id @default(cuid())
+  batchId        String    @unique // on-chain key
   lotId          String?   @unique
   beekeeperId    String?
-  state          String   @default("RECEIVED")
+  state          String    @default("RECEIVED")
   harvestStart   DateTime?
   harvestEnd     DateTime?
   weightKg       Float?
   sensorDataHash String?
   barcodePayload Json?
-  flagged        Boolean  @default(false)
+  flagged        Boolean   @default(false)
   flagReason     String?
   flagResolution String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  beekeeper       User?                @relation(fields: [beekeeperId], references: [id])
-  hives           BatchHive[]
-  lots            Lot[]
-  qualityTests    QualityTest[]
-  processingLog   ProcessingAction[]
-  jarSerials      JarSerial[]
+  beekeeper         User?               @relation(fields: [beekeeperId], references: [id])
+  hives             BatchHive[]
+  lots              Lot[]
+  qualityTests      QualityTest[]
+  processingLog     ProcessingAction[]
+  jarSerials        JarSerial[]
   ownershipTransfer OwnershipTransfer[]
-  blends          BlendComposition[]   @relation("BlendOut")
+  blends            BlendComposition[]  @relation("BlendOut")
+  collectionRecords CollectionRecord[]
 
   @@index([beekeeperId])
+}
+
+model CollectionRecord {
+  id            String   @id @default(cuid())
+  batchId       String
+  transporterId String
+  weightInKg    Float
+  accepted      Boolean
+  recordHash    String
+  recordedBy    String?
+  createdAt     DateTime @default(now())
+
+  batch Batch @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
+
+  @@index([batchId, createdAt])
+}
+
+// Commit metadata for correlating PostgreSQL mirrors with Fabric transactions.
+model LedgerTransaction {
+  id             String   @id @default(cuid())
+  txId           String   @unique
+  batchId        String?
+  operation      String
+  actorId        String?
+  actorRole      String?
+  validationCode Int
+  successful     Boolean
+  result         Json?
+  createdAt      DateTime @default(now())
+
+  @@index([batchId, createdAt])
+}
+
+model FabricEvent {
+  id                 String    @id @default(cuid())
+  txId               String    @unique
+  channel            String
+  chaincode          String
+  eventType          String
+  batchId            String?
+  blockNumber        String?
+  actorMsp           String?
+  payloadHash        String?
+  status             String?
+  validationCode     Int?
+  payload            Json?
+  observedAt         DateTime?
+  indexedAt          DateTime  @default(now())
+  verificationStatus String?
+  verifiedAt         DateTime?
+
+  @@index([batchId, indexedAt])
+  @@index([eventType, indexedAt])
+  @@index([actorMsp, indexedAt])
+}
+
+model FabricIndexerCheckpoint {
+  id                String   @id
+  channel           String
+  chaincode         String
+  lastBlock         String
+  lastTransactionId String?
+  updatedAt         DateTime @updatedAt
+
+  @@unique([channel, chaincode])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorRole  String?
+  action     String
+  entityType String
+  entityId   String?
+  beforeHash String?
+  afterHash  String?
+  ipHash     String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId, createdAt])
 }
 
 model BatchHive {
   batchId String
   hiveId  String
-  batch   Batch @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
-  hive    Hive  @relation(fields: [hiveId], references: [hiveId], onDelete: Cascade)
+  batch   Batch  @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
+  hive    Hive   @relation(fields: [hiveId], references: [hiveId], onDelete: Cascade)
 
   @@id([batchId, hiveId])
 }
 
 model QualityTest {
-  id           String            @id @default(cuid())
+  id           String      @id @default(cuid())
   batchId      String
-  stage        TestStage         // INTAKE | OUTPUT | FINAL
+  stage        TestStage // INTAKE | OUTPUT | FINAL
   moisture     Float?
   hmf          Float?
   diastase     Float?
-  sugarProfile Json?             // { fructose, glucose, sucrose }
+  sugarProfile Json? // { fructose, glucose, sucrose }
   isotopeRatio Float?
   testerId     String?
-  ts           DateTime          @default(now())
+  ts           DateTime    @default(now())
   result       TestResult?
 
   batch Batch @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
@@ -205,13 +334,13 @@ enum TestResult {
 model ProcessingAction {
   id           String   @id @default(cuid())
   batchId      String
-  actionType   String                      // heating | filtering | blending
+  actionType   String // heating | filtering | blending
   parameters   Json?
   operatorId   String?
   equipmentId  String?
   weightBefore Float?
   weightAfter  Float?
-  parentLots   Json?                       // declared parent lots + quantities for blending
+  parentLots   Json? // declared parent lots + quantities for blending
   ts           DateTime @default(now())
 
   batch Batch @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
@@ -222,7 +351,7 @@ model ProcessingAction {
 model JarSerial {
   id            String   @id @default(cuid())
   batchId       String
-  jarId         String   @unique           // e.g. BATCH-014-JAR-0001
+  jarId         String   @unique // e.g. BATCH-014-JAR-0001
   packagingDate DateTime @default(now())
 
   batch Batch @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
@@ -231,11 +360,11 @@ model JarSerial {
 }
 
 model OwnershipTransfer {
-  id         String   @id @default(cuid())
-  batchId    String
-  fromId     String?
-  toId       String?
-  ts         DateTime @default(now())
+  id      String   @id @default(cuid())
+  batchId String
+  fromId  String?
+  toId    String?
+  ts      DateTime @default(now())
 
   batch Batch @relation(fields: [batchId], references: [batchId], onDelete: Cascade)
 
@@ -259,21 +388,21 @@ model BlendComposition {
 // ---------------------------------------------------------------------------
 
 model AppearanceReport {
-  id        String   @id @default(cuid())
-  jarId     String
-  photoUrl  String?
-  color     String?
-  texture   String?
-  offSmell  Boolean  @default(false)
-  offTaste  Boolean  @default(false)
-  notes     String?
-  ts        DateTime @default(now())
+  id       String   @id @default(cuid())
+  jarId    String
+  photoUrl String?
+  color    String?
+  texture  String?
+  offSmell Boolean  @default(false)
+  offTaste Boolean  @default(false)
+  notes    String?
+  ts       DateTime @default(now())
 
   @@index([jarId])
 }
 
 model Review {
-  id      String  @id @default(cuid())
+  id      String   @id @default(cuid())
   batchId String
   rating  Int
   comment String?
@@ -283,19 +412,138 @@ model Review {
 }
 
 // ---------------------------------------------------------------------------
-// Alerts (theft / brood temp / battery / swarming)
+// Explainable telemetry alerts and deterministic feature assessments.
 // ---------------------------------------------------------------------------
 
 model Alert {
-  id           String   @id @default(cuid())
-  hiveId       String
-  type         String                      // THEFT | BROOD_TEMP | LOW_BATTERY | SWARM
-  severity     String   @default("WARNING") // INFO | WARNING | CRITICAL
-  message      String
-  acknowledged Boolean  @default(false)
-  ts           DateTime @default(now())
+  id             String      @id @default(cuid())
+  hiveId         String
+  type           String
+  severity       String      @default("WARNING") // INFO | WARNING | CRITICAL
+  message        String
+  acknowledged   Boolean     @default(false)
+  status         AlertStatus @default(OPEN)
+  source         String      @default("LEGACY")
+  predictionId   String?
+  observedAt     DateTime?   @db.Timestamptz(6)
+  acknowledgedAt DateTime?
+  acknowledgedBy String?
+  resolvedAt     DateTime?
+  resolvedBy     String?
+  resolutionNote String?
+  dedupeKey      String?     @unique
+  ts             DateTime    @default(now())
 
-  hive Hive @relation(fields: [hiveId], references: [hiveId], onDelete: Cascade)
+  hive       Hive             @relation(fields: [hiveId], references: [hiveId], onDelete: Cascade)
+  prediction ModelPrediction? @relation(fields: [predictionId], references: [id], onDelete: SetNull)
 
   @@index([hiveId, ts])
+  @@index([status, severity, ts])
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+model FeatureWindow {
+  id                 String    @id @default(cuid())
+  hiveId             String
+  featureVersion     String
+  windowStart        DateTime  @db.Timestamptz(6)
+  windowEnd          DateTime  @db.Timestamptz(6)
+  latestReadingAt    DateTime? @db.Timestamptz(6)
+  readingCount       Int
+  tempInCount        Int
+  humInCount         Int
+  weightCount        Int
+  tempOutCount       Int
+  batteryCount       Int
+  tempInLatest       Float?
+  tempInMean1h       Float?
+  tempInMin24h       Float?
+  tempInMax24h       Float?
+  tempInSlope1h      Float?
+  tempInStddev24h    Float?
+  humInLatest        Float?
+  humInMean1h        Float?
+  humInMin24h        Float?
+  humInMax24h        Float?
+  humInSlope1h       Float?
+  humInStddev24h     Float?
+  weightLatestKg     Float?
+  weightDelta1hKg    Float?
+  weightDelta24hKg   Float?
+  weightDelta7dKg    Float?
+  maxWeightDropPct1h Float?
+  tempOutLatest      Float?
+  tempOutMean1h      Float?
+  batteryLatestV     Float?
+  batteryMin24hV     Float?
+  freshnessSeconds   Int?
+  dataQualityScore   Float
+  createdAt          DateTime  @default(now())
+
+  hive        Hive              @relation(fields: [hiveId], references: [hiveId], onDelete: Cascade)
+  predictions ModelPrediction[]
+
+  @@unique([hiveId, windowEnd, featureVersion])
+  @@index([hiveId, windowEnd(sort: Desc)])
+}
+
+model ModelPrediction {
+  id                      String           @id @default(cuid())
+  hiveId                  String
+  featureWindowId         String
+  modelVersion            String
+  method                  String           @default("DETERMINISTIC_RULES")
+  status                  AssessmentStatus
+  telemetryConditionScore Int?
+  dataQualityScore        Float
+  dataQualityLabel        DataQualityLabel
+  temperatureFlag         Boolean          @default(false)
+  humidityFlag            Boolean          @default(false)
+  weightDropFlag          Boolean          @default(false)
+  batteryLowFlag          Boolean          @default(false)
+  reasons                 Json
+  recommendations         Json
+  createdAt               DateTime         @default(now())
+
+  hive          Hive                 @relation(fields: [hiveId], references: [hiveId], onDelete: Cascade)
+  featureWindow FeatureWindow        @relation(fields: [featureWindowId], references: [id], onDelete: Cascade)
+  alerts        Alert[]
+  feedback      AssessmentFeedback[]
+
+  @@unique([featureWindowId, modelVersion])
+  @@index([hiveId, createdAt(sort: Desc)])
+}
+
+enum AssessmentStatus {
+  NO_DATA
+  STALE
+  NORMAL
+  WATCH
+  ALERT
+}
+
+enum DataQualityLabel {
+  INSUFFICIENT
+  LOW
+  ADEQUATE
+  GOOD
+}
+
+model AssessmentFeedback {
+  id           String   @id @default(cuid())
+  predictionId String
+  actorId      String
+  outcome      String
+  notes        String?
+  evidenceUrl  String?
+  createdAt    DateTime @default(now())
+
+  prediction ModelPrediction @relation(fields: [predictionId], references: [id], onDelete: Cascade)
+
+  @@index([predictionId, createdAt])
 }

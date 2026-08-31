@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
+const envBoolean = z.union([z.boolean(), z.enum(['true', 'false'])]).transform((value) => value === true || value === 'true');
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().default(4000),
@@ -12,11 +14,13 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   DEVICE_API_KEY: z.string().min(1),
   REDIS_URL: z.string().default('redis://localhost:6379'),
-  REDIS_ENABLED: z.coerce.boolean().default(true),
+  REDIS_ENABLED: envBoolean.default('true'),
   VERIFY_CACHE_TTL_SECONDS: z.coerce.number().default(300),
-  FABRIC_ENABLED: z.coerce.boolean().default(true),
-  FABRIC_CHANNEL: z.string().default('honeychain-channel'),
-  FABRIC_CONTRACT: z.string().default('honeychain-cc'),
+  FABRIC_ENABLED: envBoolean.default('true'),
+  FABRIC_EVENT_INDEXER_ENABLED: envBoolean.default('false'),
+  FABRIC_EVENT_START_BLOCK: z.string().regex(/^\d+$/).optional(),
+  FABRIC_CHANNEL: z.string().default('honeychannel'),
+  FABRIC_CONTRACT: z.string().default('honeychain'),
   FABRIC_CONNECTION_PROFILE: z.string().default(''),
   FABRIC_MSP_ID: z.string().default('Org1MSP'),
   FABRIC_IDENTITY_DIR: z.string().default(''),
@@ -26,6 +30,21 @@ const envSchema = z.object({
   FABRIC_PEER_HOST_ALIAS: z.string().default('peer0.org1.example.com'),
   FABRIC_ORDERER_ENDPOINT: z.string().default('localhost:7050'),
   BARCODE_PUBLIC_BASE_URL: z.string().default('http://localhost:4000/barcodes'),
+  // Public base URL of this backend (used to build QR-code image URLs).
+  PUBLIC_BASE_URL: z.string().default('http://localhost:4000'),
+  // Public base URL of the consumer web app (used to build jar verification URLs
+  // that the QR code encodes). Must be reachable from the device scanning the QR.
+  VERIFY_PUBLIC_BASE_URL: z.string().default('http://localhost:3001'),
+  // Comma-separated list of one-time registration codes accepted by the
+  // public "Register administrator" flow. Codes are invalidated once used.
+  ADMIN_REGISTRATION_CODES: z.string().default(''),
+  // Optional LLM provider used for AI hive/disease analysis when a hive is
+  // outside its normal operating band. When unset, the API falls back to the
+  // deterministic rule-based analysis.
+  OPENROUTER_API_KEY: z.string().optional(),
+  OPENROUTER_MODEL: z.string().default('openai/gpt-4o-mini'),
+  OPENROUTER_BASE_URL: z.string().default('https://openrouter.ai/api/v1'),
+  AI_ANALYSIS_CACHE_TTL_SECONDS: z.coerce.number().default(3600),
 });
 
 const parsed = envSchema.safeParse(process.env);

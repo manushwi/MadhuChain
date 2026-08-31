@@ -5,6 +5,7 @@ import React from 'react';
 import { HapticTab } from '@/components/haptic-tab';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { themeTabBar } from '@/constants/tab-theme';
+import { useAlertNotifications } from '@/hooks/use-alert-notifications';
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
@@ -17,6 +18,7 @@ function tabIcon(name: IconName) {
 export default function TabLayout() {
   const scheme = useColorScheme() ?? 'light';
   const t = themeTabBar[scheme];
+  useAlertNotifications();
 
   return (
     <Tabs

@@ -1,24 +1,44 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import 'react-native-reanimated';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import { palette } from '@/src/theme/palette';
+import { AuthProvider, useAuth } from '@/src/context/AuthContext';
+import { LoadingState } from '@/src/components/cards';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <AuthProvider>
+      <StatusBar style="dark" />
+      <RootNavigator />
+    </AuthProvider>
+  );
+}
+
+function RootNavigator() {
+  const { status } = useAuth();
+  if (status === 'boot') return <LoadingState label="Restoring session..." />;
+  const authenticated = status === 'authenticated';
+  return (
+    <Stack
+        screenOptions={{
+          headerShown: false,
+          headerStyle: { backgroundColor: palette.bg },
+          headerTintColor: palette.accentDeep,
+          headerTitleStyle: { fontWeight: '700' },
+          contentStyle: { backgroundColor: palette.bg },
+        }}
+      >
+        <Stack.Protected guard={!authenticated}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+        <Stack.Protected guard={authenticated}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="scan"
+            options={{ presentation: 'modal', headerShown: true, headerTitle: 'Scan asset' }}
+          />
+          <Stack.Screen name="blend/create" options={{ headerShown: true, headerTitle: 'New blend' }} />
+        </Stack.Protected>
+    </Stack>
   );
 }

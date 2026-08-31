@@ -1,22 +1,6 @@
 #!/usr/bin/env bash
-# HoneyChain - enroll Fabric identities for each role used by the backend.
-#
-# The backend signs transactions custodially under a specific role identity. The
-# chaincode authorizes writes using the client identity 'role' attribute (e.g.
-# "Beekeeper", "LabTech", ...). This script registers and enrolls an identity
-# per role via the Fabric CA, embedding the 'role' attribute in each X.509 cert.
-#
-# The test-network org CA (org1) grants its bootstrap `admin` full registrar
-# attributes (hf.Registrar.Attributes=*), so registering users with the custom
-# `role` ecert attribute is permitted. The admin client must itself be enrolled
-# before it can register identities, so the script enrolls it into ./caadmin.
-#
-# NOTE: The CA's bootstrap identity is named `admin` (no role attribute), so the
-# Admin role uses a separate CA identity 'honeyadmin' to carry role=Admin.
-#
-# Requires the network to be up with a CA (./up.sh up -ca).
-#
-# Usage: ./enrollIdentities.sh
+# Enroll custodial application identities under their owning Fabric org.
+# Generated MSP material is written to ./identities and is ignored by Git.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,67 +10,77 @@ TEST_NET="$FABRIC_SAMPLES/test-network"
 export PATH="$TEST_NET/../bin:$PATH"
 export FABRIC_CFG_PATH="$TEST_NET/../config"
 
-CA_HOST="localhost:7054"
-ADMIN_USER="admin"
-ADMIN_PW="adminpw"
-TLS_CERT="$TEST_NET/organizations/fabric-ca/org1/tls-cert.pem"
-
 OUT="$SCRIPT_DIR/identities"
-ADMIN_HOME="$SCRIPT_DIR/caadmin"
+REGISTRARS="$SCRIPT_DIR/caadmin"
 
-if [ ! -f "$TLS_CERT" ]; then
-  echo "CA TLS cert not found at $TLS_CERT. Run ./bootstrap.sh && ./up.sh up -ca first." >&2
-  exit 1
-fi
-
-# The registrar (admin) must be enrolled before it can register identities.
-echo "==> Enrolling CA registrar '$ADMIN_USER'"
-mkdir -p "$ADMIN_HOME"
-export FABRIC_CA_CLIENT_HOME="$ADMIN_HOME"
-fabric-ca-client enroll -u "https://${ADMIN_USER}:${ADMIN_PW}@${CA_HOST}" \
-  --tls.certfiles "$TLS_CERT" 2>/dev/null || echo "  (registrar already enrolled)"
-
-# Enroll a role identity. $2 = CA identity id (defaults to lowercase role).
 enroll_role() {
-  local role="$1"
-  local id="${2:-${role,,}}"
+  local org="$1"
+  local msp="$2"
+  local port="$3"
+  local ca_name="$4"
+  local affiliation="$5"
+  local tls_cert="$6"
+  local role="$7"
+  local id="${8:-${role,,}}"
   local secret="${id}pw"
-  local dir="$OUT/$role"
-  local caAdminURL="https://${ADMIN_USER}:${ADMIN_PW}@${CA_HOST}"
-  local caUserURL="https://${id}:${secret}@${CA_HOST}"
+  local registrar_home="$REGISTRARS/$org"
+  local identity_dir="$OUT/$role"
 
-  echo "==> Registering identity '$id' with role=$role"
-  local reg_out
-  reg_out="$(fabric-ca-client register -u "$caAdminURL" \
-    --tls.certfiles "$TLS_CERT" \
+  if [ ! -f "$tls_cert" ]; then
+    echo "CA TLS certificate not found: $tls_cert" >&2
+    echo "Run ./up.sh up and ./deployChaincode.sh before enrolling identities." >&2
+    exit 1
+  fi
+
+  mkdir -p "$registrar_home" "$identity_dir"
+  export FABRIC_CA_CLIENT_HOME="$registrar_home"
+  fabric-ca-client enroll \
+    -u "https://admin:adminpw@localhost:${port}" \
+    --caname "$ca_name" \
+    --tls.certfiles "$tls_cert" >/dev/null 2>&1 || true
+
+  local registration
+  registration="$(fabric-ca-client register \
+    --caname "$ca_name" \
+    --tls.certfiles "$tls_cert" \
     --id.name "$id" \
     --id.secret "$secret" \
     --id.type client \
-    --id.affiliation org1.department1 \
+    --id.affiliation "$affiliation" \
     --id.attrs "role=${role}:ecert" 2>&1)" || {
-    case "$reg_out" in
-      *"already registered"*) echo "  (identity '$id' already registered; continuing)" ;;
-      *) echo "$reg_out" >&2; exit 1 ;;
-    esac
-  }
+      case "$registration" in
+        *"already registered"*) ;;
+        *) echo "$registration" >&2; exit 1 ;;
+      esac
+    }
 
-  echo "==> Enrolling identity '$id' into $dir"
-  mkdir -p "$dir"
-  fabric-ca-client enroll -u "$caUserURL" \
-    --tls.certfiles "$TLS_CERT" \
-    --enrollment.attrs "role" \
-    -M "$dir/msp"
-  cp "$dir/msp/signcerts/"* "$dir/signcert.pem" 2>/dev/null || true
-  echo "  -> enrolled $dir"
+  export FABRIC_CA_CLIENT_HOME="$identity_dir"
+  fabric-ca-client enroll \
+    -u "https://${id}:${secret}@localhost:${port}" \
+    --caname "$ca_name" \
+    --tls.certfiles "$tls_cert" \
+    --enrollment.attrs role \
+    -M "$identity_dir/msp"
+  cp "$identity_dir/msp/signcerts/"* "$identity_dir/signcert.pem" 2>/dev/null || true
+  printf '%s\n' "$msp" > "$identity_dir/msp-id"
+  echo "  -> $role enrolled under $msp"
 }
 
-enroll_role "Beekeeper"
-enroll_role "Transporter"
-enroll_role "LabTech"
-enroll_role "FactoryWorker"
-enroll_role "QCManager"
-enroll_role "Distributor"
-enroll_role "Admin" "honeyadmin"
+ORG1_TLS="$TEST_NET/organizations/fabric-ca/org1/tls-cert.pem"
+ORG2_TLS="$TEST_NET/organizations/fabric-ca/org2/tls-cert.pem"
+ORG3_TLS="$TEST_NET/addOrg3/fabric-ca/org3/tls-cert.pem"
 
-echo "==> Identity enrollment complete. See $OUT"
-ls -1 "$OUT"
+echo "==> KVIC identities (Org1MSP)"
+enroll_role org1 Org1MSP 7054 ca-org1 org1.department1 "$ORG1_TLS" Beekeeper
+enroll_role org1 Org1MSP 7054 ca-org1 org1.department1 "$ORG1_TLS" QCManager
+enroll_role org1 Org1MSP 7054 ca-org1 org1.department1 "$ORG1_TLS" Admin honeyadmin
+
+echo "==> Collection/Factory identities (Org2MSP)"
+enroll_role org2 Org2MSP 8054 ca-org2 org2.department1 "$ORG2_TLS" Transporter
+enroll_role org2 Org2MSP 8054 ca-org2 org2.department1 "$ORG2_TLS" FactoryWorker
+enroll_role org2 Org2MSP 8054 ca-org2 org2.department1 "$ORG2_TLS" Distributor
+
+echo "==> Certified Lab identity (Org3MSP)"
+enroll_role org3 Org3MSP 11054 ca-org3 org3.department1 "$ORG3_TLS" LabTech
+
+echo "==> Identity enrollment complete: $OUT"

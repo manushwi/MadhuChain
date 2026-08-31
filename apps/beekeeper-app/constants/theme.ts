@@ -59,6 +59,7 @@ export const batchStatusColors = (c: HoneychainPalette) => ({
   PROCESSING: c.accent,
   RELEASED: c.primaryDark,
   FLAGGED: c.darkAccent,
+  REJECTED: c.darkAccent,
 });
 
 // Neumorphic soft shadow (dual-edge) applied to themed Views.

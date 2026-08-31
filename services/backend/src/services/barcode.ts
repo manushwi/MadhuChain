@@ -9,7 +9,7 @@ export interface BarcodePayload {
 }
 
 /**
- * Generate a Code-128 barcode image (PNG buffer) encoding the given text.
+ * Generate a code-128 barcode image (PNG buffer) encoding the given text.
  */
 export function renderBarcodePng(text: string, width = 300, height = 120): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -24,6 +24,33 @@ export function renderBarcodePng(text: string, width = 300, height = 120): Promi
           textxalign: 'center',
           paddingwidth: 6,
           paddingheight: 6,
+        },
+        (err, png) => {
+          if (err) reject(err);
+          else resolve(png as Buffer);
+        },
+      );
+    } catch (err) {
+      reject(err as Error);
+    }
+  });
+}
+
+/**
+ * Generate a QR-code image (PNG buffer) encoding the given text. Used for the
+ * per-jar verification stickers: scanning the QR opens the consumer history page.
+ */
+export function renderQrPng(text: string, size = 480): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      bwipjs.toBuffer(
+        {
+          bcid: 'qrcode',
+          text,
+          scale: 8,
+          width: Math.round(size / 8),
+          height: Math.round(size / 8),
+          padding: 8,
         },
         (err, png) => {
           if (err) reject(err);

@@ -1,24 +1,36 @@
-import * as Notifications from 'expo-notifications';
+import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
 
-// Set the handler that lets the app treat foreground notifications as alerts.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// IMPORTANT: never import 'expo-notifications' in Expo Go. Importing the module
+// triggers a module-load side effect that registers a global push-token
+// listener, and on Android Expo Go (SDK 53+) that calls console.error
+// ("Push notifications were removed from Expo Go …") which Metro turns into a
+// redbox. So we guard Expo Go here and only load the module lazily in real
+// (dev/production) builds where remote push actually works.
+let handlerRegistered = false;
 
 /**
  * Request push permission and register. Safe to call on login.
- * In Expo Go, a remote push token requires a physical device; on simulators
- * this resolves but returns no token — the app still works via in-app alerts.
+ * No-op on web and in Expo Go; in-app alerts still work either way.
  */
 export async function setupPushNotifications(): Promise<void> {
+  if (Platform.OS === 'web' || isRunningInExpoGo()) return;
+
   try {
-    if (Platform.OS === 'web') return;
+    const Notifications = await import('expo-notifications');
+
+    // Set the handler that lets the app treat foreground notifications as alerts.
+    if (!handlerRegistered) {
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowBanner: true,
+          shouldShowList: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+        }),
+      });
+      handlerRegistered = true;
+    }
 
     const existing = await Notifications.getPermissionsAsync();
     let status = existing.status;

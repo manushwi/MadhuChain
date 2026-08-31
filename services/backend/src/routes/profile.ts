@@ -25,10 +25,14 @@ export async function updateProfile(req: Request, res: Response, next: NextFunct
     const user = await prisma.user.update({
       where: { id: req.user!.userId },
       data: {
-        apiaryName: body.apiary_name ?? undefined,
+        name: body.name ?? undefined,
+        phone: body.phone ?? undefined,
+        apiaryName: body.apiary_name ?? body.apiaryName ?? undefined,
         location: body.location ?? undefined,
-        gpsLat: body.gps_lat ?? undefined,
-        gpsLng: body.gps_lng ?? undefined,
+        gpsLat: body.gps_lat ?? body.gpsLat ?? undefined,
+        gpsLng: body.gps_lng ?? body.gpsLng ?? undefined,
+        beeSpecies: body.bee_species ?? body.beeSpecies ?? undefined,
+        nectarSource: body.nectar_source ?? body.nectarSource ?? undefined,
       },
     });
     const { passwordHash, ...rest } = user as any;

@@ -2,17 +2,17 @@
   "name": "honeychain",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "bun@1.4.0",
   "workspaces": [
     "apps/*",
     "services/*",
     "packages/*"
   ],
   "scripts": {
-    "dev:backend": "bun run --filter backend dev",
-    "dev:beekeeper": "bun run --filter beekeeper-app start",
-    "dev:factory": "bun run --filter factory-app start",
-    "dev:consumer": "bun run --filter consumer-web dev"
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:beekeeper": "npm run start --workspace beekeeper-app",
+    "dev:factory": "npm run start --workspace factory-app",
+    "dev:consumer": "npm run dev --workspace consumer-web",
+    "dev:admin": "npm run dev --workspace kvic-dashboard"
   },
   "engines": {
     "node": ">=20"

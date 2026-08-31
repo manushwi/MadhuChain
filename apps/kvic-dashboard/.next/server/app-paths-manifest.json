@@ -1,0 +1,12 @@
+{
+  "/(dashboard)/alerts/page": "app/(dashboard)/alerts/page.js",
+  "/(dashboard)/audit/page": "app/(dashboard)/audit/page.js",
+  "/(dashboard)/blockchain/[transactionId]/page": "app/(dashboard)/blockchain/[transactionId]/page.js",
+  "/(dashboard)/blockchain/page": "app/(dashboard)/blockchain/page.js",
+  "/(dashboard)/directory/page": "app/(dashboard)/directory/page.js",
+  "/(dashboard)/hives/page": "app/(dashboard)/hives/page.js",
+  "/(dashboard)/page": "app/(dashboard)/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/login/page": "app/login/page.js"
+}

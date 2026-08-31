@@ -8,6 +8,7 @@ import HiveMap from '@/components/hive-map';
 import { Neumorph } from '@/components/ui/neumorph';
 import { Screen } from '@/components/ui/screen';
 import { StatusBadge } from '@/components/status/badge';
+import { AsyncState } from '@/components/ui/async-state';
 import { getPalette, statusColors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useCreateHive, useHives } from '@/hooks/use-queries';
@@ -17,7 +18,8 @@ export default function HivesScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = getPalette(scheme);
   const params = useLocalSearchParams<{ register?: string }>();
-  const { data: hives } = useHives();
+  const hivesQuery = useHives();
+  const { data: hives } = hivesQuery;
 
   const [mode, setMode] = useState<'list' | 'map'>('list');
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -57,10 +59,10 @@ export default function HivesScreen() {
           contentContainerStyle={{ paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => <HiveRow hive={item} />}
-          ListEmptyComponent={<Text style={{ color: c.muted, textAlign: 'center', marginTop: 40 }}>No hives registered yet.</Text>}
+          ListEmptyComponent={<AsyncState loading={hivesQuery.isLoading} error={hivesQuery.error} empty emptyMessage="No hives registered yet." onRetry={() => hivesQuery.refetch()} />}
         />
         ) : (
-          <HiveMap hives={hives ?? []} onSelect={(id) => router.push(`/hive/${id}`)} />
+          hivesQuery.isLoading || hivesQuery.error ? <AsyncState loading={hivesQuery.isLoading} error={hivesQuery.error} emptyMessage="No mapped hives." onRetry={() => hivesQuery.refetch()} /> : <HiveMap hives={(hives ?? []).filter((h) => h.location)} onSelect={(id) => router.push(`/hive/${id}`)} />
         )}
 
       {registerOpen && <RegisterHive onClose={() => setRegisterOpen(false)} />}
@@ -72,7 +74,7 @@ function HiveRow({ hive }: { hive: Hive }) {
   const scheme = useColorScheme() ?? 'light';
   const c = getPalette(scheme);
   const sc = statusColors(c);
-  const color = hive.status === 'HEALTHY' ? sc.healthy : hive.status === 'WATCH' ? sc.watch : sc.alert;
+  const color = hive.status === 'NORMAL' ? sc.healthy : hive.status === 'WATCH' ? sc.watch : hive.status === 'ALERT' ? sc.alert : c.muted;
 
   return (
     <Pressable onPress={() => router.push(`/hive/${hive.id}`)}>
@@ -85,14 +87,14 @@ function HiveRow({ hive }: { hive: Hive }) {
             <StatusBadge label={hive.status} color={color} />
           </View>
           <Text variant="bodySmall" style={styles.mutedText}>
-            {hive.apiary}
+            {hive.apiary || `Sensor ${hive.hive_id}`}
           </Text>
           {hive.lastReading && (
             <View style={styles.readings}>
-              <Reading icon="thermometer" value={`${hive.lastReading.temperature.toFixed(1)}°C`} />
-              <Reading icon="water-outline" value={`${hive.lastReading.humidity.toFixed(0)}%`} />
-              <Reading icon="weight-kilogram" value={`${hive.lastReading.weight.toFixed(1)} kg`} />
-              <Reading icon="battery" value={`${hive.lastReading.battery.toFixed(0)}%`} />
+              <Reading icon="thermometer" value={metric(hive.lastReading.temperature, 1, '°C')} />
+              <Reading icon="water-outline" value={metric(hive.lastReading.humidity, 0, '%')} />
+              <Reading icon="weight-kilogram" value={metric(hive.lastReading.weight, 1, ' kg')} />
+              <Reading icon="battery" value={metric(hive.lastReading.battery, 2, ' V')} />
             </View>
           )}
         </Neumorph>
@@ -118,15 +120,29 @@ function RegisterHive({ onClose }: { onClose: () => void }) {
   const create = useCreateHive();
   const [hiveId, setHiveId] = useState('');
   const [name, setName] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
-    if (!hiveId || !name) return;
-    await create.mutateAsync({
-      hive_id: hiveId,
-      name,
-      location: { latitude: 12.9716, longitude: 77.5946 },
-    });
-    onClose();
+    if (!hiveId.trim() || !name.trim()) {
+      setError('Sensor node ID and hive name are required.');
+      return;
+    }
+    const hasCoordinates = latitude.trim() !== '' || longitude.trim() !== '';
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    if (hasCoordinates && (!latitude.trim() || !longitude.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180)) {
+      setError('Enter both valid GPS coordinates, or leave both blank.');
+      return;
+    }
+    setError(null);
+    try {
+      await create.mutateAsync({ hive_id: hiveId.trim(), name: name.trim(), location: hasCoordinates ? { latitude: lat, longitude: lng } : undefined });
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Hive registration failed.');
+    }
   };
 
   return (
@@ -137,9 +153,14 @@ function RegisterHive({ onClose }: { onClose: () => void }) {
         </Text>
         <TextInput mode="outlined" label="Sensor node ID (hive_id)" value={hiveId} onChangeText={setHiveId} style={styles.input} activeOutlineColor={c.accent} />
         <TextInput mode="outlined" label="Hive name" value={name} onChangeText={setName} style={styles.input} activeOutlineColor={c.accent} />
+        <View style={styles.coordinateRow}>
+          <TextInput mode="outlined" label="Latitude (optional)" value={latitude} onChangeText={setLatitude} keyboardType="numbers-and-punctuation" style={[styles.input, styles.coordinate]} activeOutlineColor={c.accent} />
+          <TextInput mode="outlined" label="Longitude (optional)" value={longitude} onChangeText={setLongitude} keyboardType="numbers-and-punctuation" style={[styles.input, styles.coordinate]} activeOutlineColor={c.accent} />
+        </View>
+        {error ? <Text accessibilityRole="alert" style={{ color: c.darkAccent }}>{error}</Text> : null}
         <View style={styles.registerActions}>
-          <Button mode="text" textColor={c.muted} onPress={onClose}>Cancel</Button>
-          <Button mode="contained" buttonColor={c.accent} textColor={c.highlight} onPress={submit} loading={create.isPending}>
+          <Button mode="text" textColor={c.muted} onPress={onClose} disabled={create.isPending}>Cancel</Button>
+          <Button mode="contained" buttonColor={c.accent} textColor={c.highlight} onPress={submit} loading={create.isPending} disabled={create.isPending}>
             Register
           </Button>
         </View>
@@ -147,6 +168,8 @@ function RegisterHive({ onClose }: { onClose: () => void }) {
     </View>
   );
 }
+
+const metric = (value: number | undefined, decimals: number, suffix: string) => value == null ? 'Unavailable' : `${value.toFixed(decimals)}${suffix}`;
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, marginTop: 8 },
@@ -159,4 +182,6 @@ const styles = StyleSheet.create({
   registerCard: { width: '100%', borderRadius: 22 },
   input: { marginBottom: 10, backgroundColor: 'transparent' },
   registerActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 },
+  coordinateRow: { flexDirection: 'row', gap: 8 },
+  coordinate: { flex: 1 },
 });

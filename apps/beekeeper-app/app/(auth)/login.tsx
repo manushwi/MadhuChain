@@ -16,21 +16,21 @@ export default function LoginScreen() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [secure, setSecure] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onLogin = async () => {
-    if (!email || !password) {
-      setError('Please enter your email and password.');
+    if (!identifier.trim() || !password) {
+      setError('Please enter your email or phone and password.');
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      await login(email, password);
+      await login(identifier, password);
       setupPushNotifications();
       router.replace('/(tabs)');
     } catch (e) {
@@ -59,10 +59,10 @@ export default function LoginScreen() {
           <TextInput
             mode="outlined"
             label="Email or phone"
-            value={email}
-            onChangeText={setEmail}
+            value={identifier}
+            onChangeText={setIdentifier}
             autoCapitalize="none"
-            keyboardType="email-address"
+            keyboardType="default"
             style={styles.input}
             activeOutlineColor={c.accent}
           />

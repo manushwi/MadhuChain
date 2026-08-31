@@ -59,3 +59,15 @@ export async function cacheSet(key: string, value: string, ttlSeconds: number): 
   }
   memory.set(key, { value, expires: Date.now() + ttlSeconds * 1000 });
 }
+
+export async function cacheDelete(key: string): Promise<void> {
+  const client = getRedis();
+  if (client) {
+    try {
+      await client.del(key);
+    } catch {
+      /* fall through to the local cache */
+    }
+  }
+  memory.delete(key);
+}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Button, Text } from 'react-native-paper';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -16,10 +16,15 @@ export function BarcodeLabelCard({ batch }: { batch: Batch }) {
   const [sharing, setSharing] = useState(false);
 
   const payload = batch.barcode?.payload;
+  const serverLabel = batch.barcode?.barcode_pdf_url;
 
   const onShare = async () => {
     setSharing(true);
     try {
+      if (serverLabel) {
+        await Linking.openURL(serverLabel);
+        return;
+      }
       const html = `
       <div style="padding:24px;font-family:sans-serif">
         <h2 style="color:#9B4E32">HoneyChain — Raw Honey Label</h2>
@@ -63,7 +68,7 @@ export function BarcodeLabelCard({ batch }: { batch: Batch }) {
         style={styles.button}
         onPress={onShare}
         disabled={sharing}>
-        {sharing ? <ActivityIndicator color={c.highlight} /> : 'Share / Save Label'}
+        {sharing ? <ActivityIndicator color={c.highlight} /> : serverLabel ? 'Open Server PDF Label' : 'Share / Save Label'}
       </Button>
     </Neumorph>
   );

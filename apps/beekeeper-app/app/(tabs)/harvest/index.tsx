@@ -5,6 +5,7 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Button, Text } from 'react-native-paper';
 
 import { Neumorph } from '@/components/ui/neumorph';
+import { AsyncState } from '@/components/ui/async-state';
 import { Screen } from '@/components/ui/screen';
 import { batchStatusColors, getPalette } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -14,10 +15,11 @@ import type { Batch } from '@/lib/types';
 export default function MyBatchesScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = getPalette(scheme);
-  const { data: batches } = useBatches();
+  const batchesQuery = useBatches();
+  const { data: batches } = batchesQuery;
 
   return (
-    <Screen>
+    <Screen scroll={false}>
       <View style={styles.headerRow}>
         <Text variant="headlineSmall" style={{ color: c.darkAccent, fontWeight: '700' }}>
           My Batches
@@ -33,7 +35,7 @@ export default function MyBatchesScreen() {
         contentContainerStyle={{ paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => <BatchRow batch={item} />}
-        ListEmptyComponent={<Text style={{ color: c.muted, textAlign: 'center', marginTop: 40 }}>No batches minted yet.</Text>}
+        ListEmptyComponent={<AsyncState loading={batchesQuery.isLoading} error={batchesQuery.error} empty emptyMessage="No batches minted yet." onRetry={() => batchesQuery.refetch()} />}
       />
     </Screen>
   );

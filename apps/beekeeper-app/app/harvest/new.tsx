@@ -12,49 +12,68 @@ export default function NewHarvestScreen() {
   const scheme = useColorScheme() ?? 'light';
   const c = getPalette(scheme);
   const { hive } = useLocalSearchParams<{ hive?: string }>();
-  const { data: hives } = useHives();
+  const { data: hives, isLoading: hivesLoading, error: hivesError, refetch } = useHives();
   const mint = useMintBatch();
 
   const [selected, setSelected] = useState<string[]>([]);
-  const [start, setStart] = useState(() => today());
-  const [end, setEnd] = useState(() => today());
+  const [start, setStart] = useState(() => daysAgo(1));
+  const [end, setEnd] = useState(() => daysAgo(0));
   const [weight, setWeight] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
-    if (hive && !selected.includes(hive)) {
-      setSelected((s) => (s.includes(hive) ? s : [...s, hive]));
+    if (hive) {
+      // `hive` param is the DB id passed from the hive detail screen; convert
+      // to the physical sensor hive_id before selecting.
+      const h = (hives ?? []).find((x) => x.id === hive);
+      const physical = h?.hive_id ?? hive;
+      setSelected((s) => (s.includes(physical) ? s : [...s, physical]));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hive]);
+    }, [hive, hives]);
 
   const toggle = (id: string) => {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   };
 
-  const submit = async () => {
+  const validate = () => {
     if (selected.length === 0) {
       setError('Select at least one hive.');
-      return;
+      return false;
     }
     const weightKg = Number(weight);
     if (!weightKg || weightKg <= 0) {
       setError('Enter a valid collected weight.');
-      return;
+      return false;
     }
+    if (!isDate(start) || !isDate(end)) {
+      setError('Enter both dates as YYYY-MM-DD.');
+      return false;
+    }
+    if (new Date(`${start}T00:00:00`).getTime() >= new Date(`${end}T23:59:59`).getTime()) {
+      setError('Harvest start must be before harvest end.');
+      return false;
+    }
+    return true;
+  };
+
+  const submit = async () => {
+    if (mint.isPending || !validate()) return;
+    const weightKg = Number(weight);
     setError(null);
     try {
       const res = await mint.mutateAsync({
         hive_ids: selected,
-        harvest_start: start,
-        harvest_end: end,
+        harvest_start: `${start}T00:00:00`,
+        harvest_end: `${end}T23:59:59`,
         weight_kg: weightKg,
         note: note || undefined,
       });
       router.replace({ pathname: '/harvest/[batchId]', params: { batchId: res.batch_id } });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Minting failed.');
+      setReviewing(false);
     }
   };
 
@@ -67,15 +86,26 @@ export default function NewHarvestScreen() {
         Select hive(s) and weight to mint a raw batch with a barcode label.
       </Text>
 
+      {reviewing ? (
+        <View accessibilityLabel="Harvest review summary">
+          <Text variant="titleMedium" style={{ color: c.primaryDark, marginBottom: 12 }}>Review harvest</Text>
+          <Text style={{ color: c.muted }}>Hives: {selected.join(', ')}</Text>
+          <Text style={{ color: c.muted }}>Sensor window: {start} to {end}</Text>
+          <Text style={{ color: c.muted }}>Collected weight: {weight} kg</Text>
+          {note ? <Text style={{ color: c.muted }}>Note: {note}</Text> : null}
+        </View>
+      ) : <>
       <Text variant="labelLarge" style={{ color: c.primaryDark, marginBottom: 8 }}>Hive(s)</Text>
+      {hivesLoading ? <Text style={{ color: c.muted }}>Loading hives…</Text> : null}
+      {hivesError ? <Button onPress={() => refetch()}>Could not load hives. Try again</Button> : null}
       <View style={styles.chips}>
         {(hives ?? []).map((h) => (
           <Chip
             key={h.id}
-            selected={selected.includes(h.id)}
-            onPress={() => toggle(h.id)}
+            selected={selected.includes(h.hive_id)}
+            onPress={() => toggle(h.hive_id)}
             selectedColor={c.highlight}
-            style={selected.includes(h.id) ? { backgroundColor: c.accent } : { backgroundColor: c.surfaceAlt }}>
+            style={selected.includes(h.hive_id) ? { backgroundColor: c.accent } : { backgroundColor: c.surfaceAlt }}>
             {h.name}
           </Chip>
         ))}
@@ -85,6 +115,9 @@ export default function NewHarvestScreen() {
         <TextInput mode="outlined" label="Harvest start" value={start} onChangeText={setStart} placeholder="YYYY-MM-DD" style={styles.dateInput} activeOutlineColor={c.accent} />
         <TextInput mode="outlined" label="Harvest end" value={end} onChangeText={setEnd} placeholder="YYYY-MM-DD" style={styles.dateInput} activeOutlineColor={c.accent} />
       </View>
+      <Text variant="bodySmall" style={{ color: c.muted, marginBottom: 12 }}>
+        This window must include sensor readings for every selected hive. Start must be before end.
+      </Text>
 
       <TextInput
         mode="outlined"
@@ -95,6 +128,7 @@ export default function NewHarvestScreen() {
         style={styles.input}
         activeOutlineColor={c.accent}
       />
+      </>}
       <TextInput
         mode="outlined"
         label="Note (optional)"
@@ -112,19 +146,38 @@ export default function NewHarvestScreen() {
         buttonColor={c.accent}
         textColor={c.highlight}
         style={styles.submit}
-        onPress={submit}
+        onPress={() => {
+          if (!reviewing) {
+            if (validate()) {
+              setError(null);
+              setReviewing(true);
+            }
+            return;
+          }
+          submit();
+        }}
+        disabled={mint.isPending || hivesLoading}
         loading={mint.isPending}
         icon="barcode-scan">
-        Mint Batch & Generate Barcode
+        {reviewing ? 'Confirm & Mint Batch' : 'Review Harvest'}
       </Button>
+      {reviewing ? <Button onPress={() => setReviewing(false)} disabled={mint.isPending}>Edit details</Button> : null}
     </Screen>
   );
 }
 
-function today(): string {
+function daysAgo(days: number): string {
   const d = new Date();
+  d.setDate(d.getDate() - days);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+const isDate = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return date.getFullYear() === Number(match[1]) && date.getMonth() === Number(match[2]) - 1 && date.getDate() === Number(match[3]);
+};
 
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },

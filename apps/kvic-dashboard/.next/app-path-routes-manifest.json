@@ -1,0 +1,12 @@
+{
+  "/(dashboard)/alerts/page": "/alerts",
+  "/(dashboard)/audit/page": "/audit",
+  "/(dashboard)/blockchain/[transactionId]/page": "/blockchain/[transactionId]",
+  "/(dashboard)/blockchain/page": "/blockchain",
+  "/(dashboard)/directory/page": "/directory",
+  "/(dashboard)/hives/page": "/hives",
+  "/(dashboard)/page": "/",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/login/page": "/login"
+}

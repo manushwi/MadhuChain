@@ -2,14 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as grpc from '@grpc/grpc-js';
-import { connect, Contract, Gateway, Identity, Signer, signers } from '@hyperledger/fabric-gateway';
+import { connect, Contract, Gateway, Identity, Network, Signer, signers } from '@hyperledger/fabric-gateway';
 import { config } from '../../config.js';
 
 /**
  * FabricService is the ONLY place the backend talks to Hyperledger Fabric.
  *
  * It wraps the Fabric Gateway SDK to submit (write) and evaluate (read)
- * transactions against the 'honeychain-cc' contract on 'honeychain-channel'.
+   * transactions against the 'honeychain' contract on 'honeychannel'.
  *
  * The backend signs custodially: it holds enrolled identities (from
  * chain/network/enrollIdentities.sh) on disk and signs on behalf of the app
@@ -17,29 +17,35 @@ import { config } from '../../config.js';
  * can delegate via the identity directory passed at construction time.
  */
 export class FabricService {
-  private gateway: Gateway | null = null;
-  private client: grpc.Client | null = null;
-  private contract: Contract | null = null;
+  private readonly connections = new Map<string, {
+    gateway: Gateway;
+    client: grpc.Client;
+    contract: Contract;
+    network: Network;
+  }>();
   private readonly channel: string;
   private readonly contractName: string;
+  private readonly defaultIdentityDir: string;
 
   constructor(identityDir = config.FABRIC_IDENTITY_DIR) {
     this.channel = config.FABRIC_CHANNEL;
     this.contractName = config.FABRIC_CONTRACT;
+    this.defaultIdentityDir = identityDir;
   }
 
   /** Establish the gateway connection from the connection profile + identity. */
-  async connect(): Promise<void> {
+  private async connection(identityDir = this.defaultIdentityDir, mspId = config.FABRIC_MSP_ID) {
     if (!config.FABRIC_ENABLED) {
       throw new Error('Fabric is disabled (FABRIC_ENABLED=false). Check chain/network setup.');
     }
-    if (this.gateway) return;
+    const resolvedIdentityDir = path.resolve(identityDir);
+    const existing = this.connections.get(resolvedIdentityDir);
+    if (existing) return existing;
 
     const rawCcp = this.readConnectionProfile();
     const ccp = this.normalizeProfile(rawCcp);
 
-    const identityDir = path.resolve(config.FABRIC_IDENTITY_DIR);
-    const mspPath = path.join(identityDir, 'msp');
+    const mspPath = path.join(resolvedIdentityDir, 'msp');
     const certPath = path.join(mspPath, 'signcerts');
     if (!fs.existsSync(certPath)) {
       throw new Error(`No signcerts at ${certPath}. Run chain/network/enrollIdentities.sh first.`);
@@ -50,8 +56,9 @@ export class FabricService {
 
     const keyPath = path.join(mspPath, 'keystore');
     if (!fs.existsSync(keyPath)) throw new Error(`No keystore at ${keyPath}. Enroll an identity first.`);
-    const keyFile = fs.readdirSync(keyPath).find((f) => f.endsWith('_sk') || f.endsWith('.pem'));
-    if (!keyFile) throw new Error(`No private key found in ${keyPath}`);
+    const keyFiles = fs.readdirSync(keyPath).filter((f) => f.endsWith('_sk') || f.endsWith('.pem'));
+    if (keyFiles.length === 0) throw new Error(`No private key found in ${keyPath}`);
+    const keyFile = this.pickMatchingKey(keyFiles, keyPath, certPem);
     const keyPem = fs.readFileSync(path.join(keyPath, keyFile), 'utf8');
 
     // Peer target + TLS.
@@ -71,14 +78,13 @@ export class FabricService {
     const client = new grpc.Client(peerEndpoint, tlsCredentials, channelOptions);
 
     const identity: Identity = {
-      mspId: config.FABRIC_MSP_ID,
+      mspId,
       credentials: new TextEncoder().encode(certPem),
     };
     const privateKey = crypto.createPrivateKey(keyPem);
     const signer: Signer = signers.newPrivateKeySigner(privateKey);
 
-    this.client = client;
-    this.gateway = connect({
+    const gateway = connect({
       client,
       identity,
       signer,
@@ -88,7 +94,43 @@ export class FabricService {
       commitStatusOptions: () => ({ deadline: Date.now() + 60000 }),
     });
 
-    this.contract = this.gateway.getNetwork(this.channel).getContract(this.contractName);
+    const network = gateway.getNetwork(this.channel);
+    const connection = {
+      client,
+      gateway,
+      network,
+      contract: network.getContract(this.contractName),
+    };
+    this.connections.set(resolvedIdentityDir, connection);
+    return connection;
+  }
+
+  /**
+   * Pick the private key file whose public key matches the enrollment cert.
+   * Re-enrolling an identity leaves multiple _sk files in the keystore; using
+   * an outdated one produces an invalid signature that the peer rejects
+   * ("signature is invalid", "access denied: channel creator org [...]").
+   * Fall back to the most recently modified key if no key matches the cert.
+   */
+  private pickMatchingKey(keyFiles: string[], keyPath: string, certPem: string): string {
+    const certPublicKey = this.exportPublicKey(certPem);
+    for (const file of keyFiles) {
+      const keyPem = fs.readFileSync(path.join(keyPath, file), 'utf8');
+      if (this.exportPublicKey(keyPem) === certPublicKey) {
+        return file;
+      }
+    }
+    return keyFiles
+      .slice()
+      .sort(
+        (a, b) =>
+          fs.statSync(path.join(keyPath, b)).mtimeMs - fs.statSync(path.join(keyPath, a)).mtimeMs,
+      )[0];
+  }
+
+  private exportPublicKey(pem: string): string {
+    const key = crypto.createPublicKey(pem);
+    return key.export({ type: 'spki', format: 'der' }).toString('hex');
   }
 
   private readConnectionProfile(): any {
@@ -117,31 +159,72 @@ export class FabricService {
   }
 
   async close(): Promise<void> {
-    if (this.gateway) {
-      this.gateway.close();
-      this.gateway = null;
+    for (const { gateway, client } of this.connections.values()) {
+      gateway.close();
+      client.close();
     }
-    if (this.client) {
-      this.client.close();
-      this.client = null;
-    }
-    this.contract = null;
+    this.connections.clear();
   }
 
-  /** Submit a write transaction to the chaincode. */
-  async submit(fn: string, ...args: string[]): Promise<string> {
-    await this.connect();
-    const result = await this.contract!.submitTransaction(fn, ...args);
-    return Buffer.from(result).toString('utf8');
+  /** Submit with the enrolled role identity and return the real commit metadata. */
+  async submitAs(role: string, fn: string, ...args: string[]): Promise<FabricSubmitResult> {
+    const identity = this.identityForRole(role);
+    const { contract } = await this.connection(identity.directory, identity.mspId);
+    const proposal = contract.newProposal(fn, { arguments: args });
+    const transactionId = proposal.getTransactionId();
+    const endorsed = await proposal.endorse();
+    const result = Buffer.from(endorsed.getResult()).toString('utf8');
+    const submitted = await endorsed.submit();
+    const status = await submitted.getStatus();
+    if (!status.successful) {
+      throw new Error(`Fabric transaction ${transactionId} failed validation with code ${status.code}`);
+    }
+    return { transactionId, validationCode: Number(status.code), successful: true, result };
   }
 
   /** Evaluate a read-only query against the chaincode. */
   async evaluate(fn: string, ...args: string[]): Promise<string> {
-    await this.connect();
-    const result = await this.contract!.evaluateTransaction(fn, ...args);
+    const { contract } = await this.connection();
+    const result = await contract.evaluateTransaction(fn, ...args);
     return Buffer.from(result).toString('utf8');
   }
+
+  async chaincodeEvents(startBlock?: bigint) {
+    const { network } = await this.connection();
+    return network.getChaincodeEvents(this.contractName, startBlock == null ? undefined : { startBlock });
+  }
+
+  /** The MSP the given application role signs as. */
+  mspForRole(role: string): string {
+    return this.identityForRole(role).mspId;
+  }
+
+  private identityForRole(role: string): { directory: string; mspId: string } {
+    const identity = ROLE_IDENTITIES[role];
+    if (!identity) throw new Error(`No Fabric identity configured for application role ${role}`);
+    return {
+      directory: path.join(path.dirname(path.resolve(this.defaultIdentityDir)), identity.directory),
+      mspId: identity.mspId,
+    };
+  }
 }
+
+export interface FabricSubmitResult {
+  transactionId: string;
+  validationCode: number;
+  successful: boolean;
+  result: string;
+}
+
+const ROLE_IDENTITIES: Record<string, { directory: string; mspId: string }> = {
+  BEEKEEPER: { directory: 'Beekeeper', mspId: 'Org1MSP' },
+  TRANSPORTER: { directory: 'Transporter', mspId: 'Org2MSP' },
+  LABTECH: { directory: 'LabTech', mspId: 'Org3MSP' },
+  FACTORYWORKER: { directory: 'FactoryWorker', mspId: 'Org2MSP' },
+  QCMANAGER: { directory: 'QCManager', mspId: 'Org1MSP' },
+  DISTRIBUTOR: { directory: 'Distributor', mspId: 'Org2MSP' },
+  ADMIN: { directory: 'Admin', mspId: 'Org1MSP' },
+};
 
 function endpointFromUrl(url: string): string {
   const clean = url.replace(/^grpcs?:\/\//, '');

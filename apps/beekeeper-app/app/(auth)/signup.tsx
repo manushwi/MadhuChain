@@ -5,7 +5,9 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleShe
 import { Button, Text, TextInput } from 'react-native-paper';
 
 import { Neumorph } from '@/components/ui/neumorph';
+import { OptionPicker } from '@/components/ui/option-picker';
 import { getPalette } from '@/constants/theme';
+import { BEE_SPECIES_OPTIONS, NECTAR_SOURCE_OPTIONS } from '@/constants/options';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuthStore } from '@/stores/auth-store';
 import { setupPushNotifications } from '@/lib/notifications';
@@ -17,18 +19,20 @@ export default function SignupScreen() {
   const signup = useAuthStore((s) => s.signup);
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [apiary, setApiary] = useState('');
   const [location, setLocation] = useState('');
+  const [beeSpecies, setBeeSpecies] = useState('');
+  const [nectarSource, setNectarSource] = useState('');
   const [secure, setSecure] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onSignup = async () => {
-    if (!name || !email || !password || !apiary || !location) {
-      setError('Please fill in all fields.');
+    if (!name || !identifier.trim() || !password || !apiary || !location || !beeSpecies || !nectarSource) {
+      setError('Please fill in all fields, including bee species and nectar source.');
       return;
     }
     if (password !== confirm) {
@@ -38,7 +42,8 @@ export default function SignupScreen() {
     setLoading(true);
     setError(null);
     try {
-      await signup({ name, email, password, apiary_name: apiary, location });
+      const credential = identifier.includes('@') ? { email: identifier.trim() } : { phone: identifier.trim() };
+      await signup({ name, ...credential, password, apiary_name: apiary, location, bee_species: beeSpecies, nectar_source: nectarSource });
       setupPushNotifications();
       router.replace('/(tabs)');
     } catch (e) {
@@ -65,11 +70,24 @@ export default function SignupScreen() {
 
         <Neumorph style={styles.card}>
           <TextInput mode="outlined" label="Full name" value={name} onChangeText={setName} style={styles.input} activeOutlineColor={c.accent} />
-          <TextInput mode="outlined" label="Email or phone" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" style={styles.input} activeOutlineColor={c.accent} />
+          <TextInput mode="outlined" label="Email or phone" value={identifier} onChangeText={setIdentifier} autoCapitalize="none" keyboardType="default" style={styles.input} activeOutlineColor={c.accent} />
           <TextInput mode="outlined" label="Password" value={password} onChangeText={setPassword} secureTextEntry={secure} style={styles.input} activeOutlineColor={c.accent} right={<TextInput.Icon icon={secure ? 'eye-off' : 'eye'} onPress={() => setSecure((v) => !v)} />} />
           <TextInput mode="outlined" label="Confirm password" value={confirm} onChangeText={setConfirm} secureTextEntry style={styles.input} activeOutlineColor={c.accent} />
           <TextInput mode="outlined" label="Apiary name" value={apiary} onChangeText={setApiary} style={styles.input} activeOutlineColor={c.accent} />
           <TextInput mode="outlined" label="Location" value={location} onChangeText={setLocation} style={styles.input} activeOutlineColor={c.accent} />
+
+          <OptionPicker
+            label="Which bee species are you keeping?"
+            options={BEE_SPECIES_OPTIONS}
+            value={beeSpecies}
+            onChange={setBeeSpecies}
+          />
+          <OptionPicker
+            label="Which flower / nectar source are your bees getting?"
+            options={NECTAR_SOURCE_OPTIONS}
+            value={nectarSource}
+            onChange={setNectarSource}
+          />
 
           {error ? <Text variant="bodySmall" style={{ color: c.darkAccent, marginTop: 8 }}>{error}</Text> : null}
 

@@ -24,7 +24,7 @@ const slides = [
   {
     icon: 'bell-ring-outline' as const,
     title: 'Stay Alert & In Control',
-    body: 'Get notified instantly about theft, abnormal brood temperature, low battery or swarming signals — and act before it\'s too late.',
+    body: 'Get notified about measured weight changes, internal temperature or humidity bands, low battery, and stale telemetry.',
   },
 ];
 

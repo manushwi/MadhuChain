@@ -12,16 +12,19 @@ interface SensorLineChartProps {
   label?: string;
   suffix?: string;
   decimals?: number;
+  metric: 'temperature' | 'humidity' | 'weight';
 }
 
-export function SensorLineChart({ points, color, label, suffix = '', decimals = 1 }: SensorLineChartProps) {
+export function SensorLineChart({ points, color, label, suffix = '', decimals = 1, metric }: SensorLineChartProps) {
   const scheme = useColorScheme() ?? 'light';
   const c = getPalette(scheme);
 
-  const data = points.map((p, i) => {
-    const value = p.weight ?? p.temperature;
-    return { value: Number(value.toFixed(decimals)), label: i % 4 === 0 ? fmtShort(p.ts) : '' };
+  const data = points.flatMap((p, i) => {
+    const value = p[metric];
+    return value == null ? [] : [{ value: Number(value.toFixed(decimals)), label: i % 4 === 0 ? fmtShort(p.ts) : '' }];
   });
+
+  if (data.length === 0) return <Text style={{ color: c.muted }}>No {label?.toLowerCase() ?? metric} readings in this range.</Text>;
 
   return (
     <View>
@@ -43,6 +46,9 @@ export function SensorLineChart({ points, color, label, suffix = '', decimals = 
         endOpacity={0}
         height={150}
         spacing={22}
+        initialSpacing={16}
+        endSpacing={16}
+        scrollToEnd
         yAxisTextStyle={{ color: c.muted, fontSize: 10 }}
         xAxisLabelTextStyle={{ color: c.muted, fontSize: 9 }}
         rulesColor="rgba(0,0,0,0.05)"

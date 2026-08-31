@@ -9,19 +9,20 @@ interface HiveMapProps {
 }
 
 export default function HiveMap({ hives, onSelect }: HiveMapProps) {
+  const located = hives.filter((h): h is Hive & { location: NonNullable<Hive['location']> } => !!h.location);
   const region =
-    hives.length > 0
+    located.length > 0
       ? {
-          latitude: hives[0].location.latitude,
-          longitude: hives[0].location.longitude,
+          latitude: located[0].location.latitude,
+          longitude: located[0].location.longitude,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }
-      : { latitude: 12.9716, longitude: 77.5946, latitudeDelta: 0.05, longitudeDelta: 0.05 };
+      : undefined;
 
   return (
     <MapView style={styles.map} region={region}>
-      {hives.map((h) => (
+      {located.map((h) => (
         <Marker
           key={h.id}
           coordinate={h.location}
