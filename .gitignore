@@ -55,6 +55,10 @@ services/backend/identities/
 .DS_Store
 Thumbs.db
 
+# Media recordings / stray videos
+*.mov
+76361
+
 # Editors
 .vscode/
 .idea/
