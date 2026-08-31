@@ -1,7 +1,0 @@
-{
-  "/(dashboard)/blockchain/[transactionId]/page": "app/(dashboard)/blockchain/[transactionId]/page.js",
-  "/(dashboard)/blockchain/page": "app/(dashboard)/blockchain/page.js",
-  "/(dashboard)/directory/page": "app/(dashboard)/directory/page.js",
-  "/(dashboard)/page": "app/(dashboard)/page.js",
-  "/login/page": "app/login/page.js"
-}

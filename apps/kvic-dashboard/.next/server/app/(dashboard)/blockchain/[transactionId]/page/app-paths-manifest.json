@@ -1,3 +1,0 @@
-{
-  "/(dashboard)/blockchain/[transactionId]/page": "app/(dashboard)/blockchain/[transactionId]/page.js"
-}
