@@ -27,7 +27,7 @@ export function BarcodeLabelCard({ batch }: { batch: Batch }) {
       }
       const html = `
       <div style="padding:24px;font-family:sans-serif">
-        <h2 style="color:#9B4E32">HoneyChain — Raw Honey Label</h2>
+        <h2 style="color:#9B4E32">MadhuChain — Raw Honey Label</h2>
         <p>Lot ID: <strong>${payload?.lot_id}</strong></p>
         <p>Weight: <strong>${payload?.weight_kg} kg</strong></p>
         <p>Harvest date: <strong>${payload?.harvest_date}</strong></p>

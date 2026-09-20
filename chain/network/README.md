@@ -1,10 +1,10 @@
-# HoneyChain — Hyperledger Fabric Network (3 orgs, local)
+# MadhuChain — Hyperledger Fabric Network (3 orgs, local)
 
 Brings up a permissioned Hyperledger Fabric network for development and pilot:
-**3 orgs, 1 peer each, 1 orderer (Raft)**, channel `honeychannel`, and
-smart contract `honeychain` (Go).
+**3 orgs, 1 peer each, 1 orderer (Raft)**, channel `madhuchannel`, and
+smart contract `madhuchain` (Go).
 
-| MSP | HoneyChain organization |
+| MSP | MadhuChain organization |
 |---|---|
 | `Org1MSP` | KVIC |
 | `Org2MSP` | Collection / Factory |
@@ -34,8 +34,8 @@ talks to Fabric** — all apps talk to the backend over REST.
 ./deployChaincode.sh
 ```
 
-This creates `honeychannel`, adds Org3, and deploys the Go chaincode
-`honeychain` from `chain/chaincode/honeychain-cc`.
+This creates `madhuchannel`, adds Org3, and deploys the Go chaincode
+`madhuchain` from `chain/chaincode/madhuchain-cc`.
 
 ### Redeploy after chaincode changes
 
@@ -51,12 +51,12 @@ export MSYS_NO_PATHCONV=1
 export MSYS_ENV_CONV_EXCL='*'
 export MSYS2_ENV_CONV_EXCL='*'
 export PATH="$PWD/../bin:/c/Program Files/Go/bin:$PATH"      # peer CLI + jq + go (packager runs `go list`)
-export FABRIC_CFG_PATH='D:/Honeychain/chain/network/fabric-samples/config'   # core.yaml dir, Windows form
+export FABRIC_CFG_PATH='D:/MadhuChain/chain/network/fabric-samples/config'   # core.yaml dir, Windows form
 export TEST_NETWORK_HOME="$(cygpath -w "$PWD")"              # Windows-form so envVar.sh paths are absolute
-rm -f honeychain-cc.tar.gz                                   # never reuse a stale package
+rm -f madhuchain-cc.tar.gz                                   # never reuse a stale package
 
-./scripts/deployCC.sh honeychain-channel honeychain-cc \
-  'D:/Honeychain/chain/chaincode/honeychain-cc' go 1.4 5
+./scripts/deployCC.sh madhuchain-channel madhuchain-cc \
+  'D:/MadhuChain/chain/chaincode/madhuchain-cc' go 1.4 5
 #                                                      ^^^^^ chaincode version, then sequence (increment both)
 ```
 

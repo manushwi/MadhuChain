@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "HoneyChain backend API - the single bridge between apps and Hyperledger Fabric",
+  "description": "MadhuChain backend API - the single bridge between apps and Hyperledger Fabric",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

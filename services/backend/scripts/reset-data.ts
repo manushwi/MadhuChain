@@ -1,4 +1,4 @@
-// Full data reset: deletes every row across the HoneyChain database, including
+// Full data reset: deletes every row across the MadhuChain database, including
 // administrators and the base organizations. Run ONLY when you intend to start
 // from a completely empty ledger mirror.
 //

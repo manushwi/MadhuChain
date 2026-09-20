@@ -40,7 +40,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow HoneyChain to scan batch barcodes."
+          "cameraPermission": "Allow MadhuChain to scan batch barcodes."
         }
       ]
     ],

@@ -178,14 +178,14 @@ function statusPresentation(data: Verification) {
   if (dangerous) return { tone: "danger", title: formatLabel(status), kicker: "ACTION REQUIRED" };
   if (batchConcern) return { tone: "warning", title: `Batch ${formatLabel(batchState)}`, kicker: "VERIFY WITH CARE" };
   if (!integrityOk || !verified) return { tone: "warning", title: formatLabel(status), kicker: "VERIFY WITH CARE" };
-  return { tone: "verified", title: "Authentic jar", kicker: "HONEYCHAIN VERIFIED" };
+  return { tone: "verified", title: "Authentic jar", kicker: "MADHUCHAIN VERIFIED" };
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
   const { token } = await params;
   return {
     title: `Verify jar ${token}`,
-    description: `HoneyChain authenticity and chain-of-custody record for jar token ${token}.`,
+    description: `MadhuChain authenticity and chain-of-custody record for jar token ${token}.`,
     robots: { index: false, follow: false },
   };
 }
@@ -305,7 +305,7 @@ export default async function VerificationPage({ params }: { params: Promise<{ t
         <div className="status-copy">
           <p className="eyebrow">{presentation.kicker}</p>
           <h1>{presentation.title}</h1>
-          <p>{data.authenticity.message || "Verification status supplied by the HoneyChain record."}</p>
+          <p>{data.authenticity.message || "Verification status supplied by the MadhuChain record."}</p>
           <div className="hero-badges">
             <span className="badge badge-green"><i>✓</i> Blockchain sealed</span>
             <span className="badge"><i>✧</i> {jars.length} jar{jars.length === 1 ? "" : "s"} released</span>
@@ -324,7 +324,7 @@ export default async function VerificationPage({ params }: { params: Promise<{ t
             )}
             <strong className="sticker-id">{data.jar.jar_id}</strong>
             <span className="sticker-token">{data.batch.batch_id}</span>
-            <em>HoneyChain</em>
+            <em>MadhuChain</em>
           </div>
         </div>
       </section>
@@ -480,7 +480,7 @@ export default async function VerificationPage({ params }: { params: Promise<{ t
 
       <footer className="verification-footer">
         <Brand />
-        <p>This verification reflects the latest uncached record returned by HoneyChain.</p>
+        <p>This verification reflects the latest uncached record returned by MadhuChain.</p>
         <span>Token: {token}</span>
       </footer>
     </main>

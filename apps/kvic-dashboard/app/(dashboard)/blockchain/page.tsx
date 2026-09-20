@@ -14,7 +14,7 @@ export default async function ChainActivityPage({ searchParams }: { searchParams
 
   return <main className="page chain-page">
     <AutoRefresh/>
-    <PageHeader kicker="Ledger timeline" title="Chain Activity" description="A chronological feed of custody and processing events anchored to the HoneyChain ledger." aside={<div className="date-stamp">Network records<br/><strong>{data.total} events</strong></div>} />
+    <PageHeader kicker="Ledger timeline" title="Chain Activity" description="A chronological feed of custody and processing events anchored to the MadhuChain ledger." aside={<div className="date-stamp">Network records<br/><strong>{data.total} events</strong></div>} />
     <form className="chain-search" method="get" role="search">
       <label><span>Search chain activity</span><input name="search" defaultValue={params.search} placeholder="Transaction, batch, event, actor MSP, or status"/></label>
       <button className="button primary" type="submit">Search</button>

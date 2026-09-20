@@ -7,7 +7,7 @@ import { startFabricEventIndexer, stopFabricEventIndexer } from './workers/fabri
 const app = createApp();
 
 const server = app.listen(config.PORT, config.HOST, () => {
-  console.log(`HoneyChain backend listening on http://${config.HOST}:${config.PORT}`);
+  console.log(`MadhuChain backend listening on http://${config.HOST}:${config.PORT}`);
   startFabricEventIndexer();
 });
 

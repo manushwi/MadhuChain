@@ -31,4 +31,4 @@ export const API_CONFIGURATION_ERROR = configuredUrl && !normalizedConfiguredUrl
     ? 'No backend API is configured. Set EXPO_PUBLIC_API_BASE_URL before starting or building the app.'
     : null;
 
-export const TOKEN_STORAGE_KEY = 'honeychain.factory.token';
+export const TOKEN_STORAGE_KEY = 'madhuchain.factory.token';

@@ -34,5 +34,5 @@ export const API_CONFIGURATION_ERROR = configuredApiUrl && !normalizedConfigured
 
 export const API_BASE_URL = normalizedConfiguredUrl ?? (__DEV__ ? getDevelopmentApiUrl() : '');
 export const API_FETCH_TIMEOUT_MS = 12_000;
-export const TOKEN_STORAGE_KEY = 'honeychain.session.token';
-export const ONBOARDING_STORAGE_KEY = 'honeychain.onboarding.complete';
+export const TOKEN_STORAGE_KEY = 'madhuchain.session.token';
+export const ONBOARDING_STORAGE_KEY = 'madhuchain.onboarding.complete';

@@ -103,7 +103,7 @@ export default function BatchDetailScreen() {
   const shareVerificationUrl = async (jarId: string, url: string) => {
     setVerificationError(null);
     try {
-      await Share.share({ title: `HoneyChain jar ${jarId}`, message: `${jarId}\n${url}`, url });
+      await Share.share({ title: `MadhuChain jar ${jarId}`, message: `${jarId}\n${url}`, url });
     } catch (e) {
       setVerificationError(e instanceof Error ? e.message : 'The verification URL could not be shared.');
     }

@@ -49,7 +49,7 @@ export function createApp() {
   app.use(cookieParser());
 
   // Health
-  app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'honeychain-backend' }));
+  app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'madhuchain-backend' }));
 
   // Auth
   app.post('/api/auth/signup', signup);

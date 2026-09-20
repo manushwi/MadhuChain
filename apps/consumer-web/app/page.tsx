@@ -14,7 +14,7 @@ export default function Home() {
           <p className="eyebrow">FROM HIVE TO HOME</p>
           <h1>Know the story<br />inside your jar.</h1>
           <p className="hero-intro">
-            Every HoneyChain jar carries a unique record of its origin, quality,
+            Every MadhuChain jar carries a unique record of its origin, quality,
             and journey. Scan the code on the label to verify yours.
           </p>
           <VerificationForm />
@@ -23,14 +23,14 @@ export default function Home() {
         <div className="scan-illustration" aria-hidden="true">
           <div className="sun-disc" />
           <div className="flight-path" />
-          <div className="bee">HC</div>
+          <div className="bee">MC</div>
           <div className="jar-card">
             <div className="jar-lid" />
             <div className="jar-body">
               <div className="jar-label">
                 <span>PURE &amp; TRACEABLE</span>
                 <strong>HONEY</strong>
-                <small>HONEYCHAIN VERIFIED</small>
+                <small>MADHUCHAIN VERIFIED</small>
               </div>
               <div className="qr-mini"><i /><i /><i /><i /></div>
             </div>

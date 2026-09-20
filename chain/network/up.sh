@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# HoneyChain - bring up the Org1/KVIC and Org2/Factory base network.
+# MadhuChain - bring up the Org1/KVIC and Org2/Factory base network.
 #
-# deployChaincode.sh creates honeychannel and adds Org3/Certified Lab before
-# deploying the honeychain contract.
+# deployChaincode.sh creates madhuchannel and adds Org3/Certified Lab before
+# deploying the madhuchain contract.
 #
 # Usage: ./up.sh [up|up -ca|down]
 #   up       - start peers + orderer (no CA)
@@ -29,7 +29,7 @@ case "${1:-up}" in
   up)
     echo "==> Starting Fabric base network (Org1/KVIC + Org2/Factory)"
     ./network.sh up -ca -s couchdb
-    echo "==> Base network up. Run ./deployChaincode.sh to create honeychannel and add Org3/Lab."
+    echo "==> Base network up. Run ./deployChaincode.sh to create madhuchannel and add Org3/Lab."
     ;;
   down)
     echo "==> Tearing down the network"

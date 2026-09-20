@@ -9,7 +9,7 @@ import { config } from '../../config.js';
  * FabricService is the ONLY place the backend talks to Hyperledger Fabric.
  *
  * It wraps the Fabric Gateway SDK to submit (write) and evaluate (read)
-   * transactions against the 'honeychain' contract on 'honeychannel'.
+   * transactions against the 'madhuchain' contract on 'madhuchannel'.
  *
  * The backend signs custodially: it holds enrolled identities (from
  * chain/network/enrollIdentities.sh) on disk and signs on behalf of the app

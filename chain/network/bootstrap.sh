@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# HoneyChain - Fabric network bootstrap
+# MadhuChain - Fabric network bootstrap
 # Downloads Hyperledger Fabric binaries, Docker images and fabric-samples
 # (test-network) into ./fabric-samples. Idempotent: safe to re-run.
 #
@@ -22,4 +22,4 @@ echo "==> Downloading fabric-samples, binaries and Docker images (versions: fabr
 
 echo "==> Bootstrap complete."
 echo "    Next: ./up.sh  (brings up 1-org test network)"
-echo "    Then:  ./deployChaincode.sh (creates honeychain-channel + deploys honeychain-cc)"
+echo "    Then:  ./deployChaincode.sh (creates madhuchain-channel + deploys madhuchain-cc)"

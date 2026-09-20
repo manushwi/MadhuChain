@@ -49,7 +49,7 @@ export default function LoginScreen() {
           <MaterialCommunityIcons name="bee" size={64} color={c.accent} />
         </View>
         <Text variant="headlineLarge" style={{ color: c.darkAccent, fontWeight: '700', marginBottom: 4 }}>
-          HoneyChain
+          MadhuChain
         </Text>
         <Text variant="bodyMedium" style={{ color: c.muted, marginBottom: 24 }}>
           Sign in to your beekeeper account

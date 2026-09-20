@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# HoneyChain - create the channel, add the lab org, and deploy Go chaincode.
+# MadhuChain - create the channel, add the lab org, and deploy Go chaincode.
 #
 # Prereqs:
 #   - ./bootstrap.sh has been run
@@ -7,9 +7,9 @@
 #   - Go toolchain available (chaincode is written in Go)
 #
 # Steps:
-#   1. Create honeychannel with Org1/KVIC and Org2/Factory
+#   1. Create madhuchannel with Org1/KVIC and Org2/Factory
 #   2. Add Org3/Certified Lab to the channel
-#   3. Package, approve, and commit the honeychain contract
+#   3. Package, approve, and commit the madhuchain contract
 #
 # Re-runnable: steps already done (channel joined, chaincode committed, CCAAS
 # containers running) are detected and skipped. Run it after a reboot to bring
@@ -25,10 +25,10 @@ export MSYS2_ENV_CONV_EXCL='DOCKER_SOCK'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEST_NET="$SCRIPT_DIR/fabric-samples/test-network"
-CC_PATH="$SCRIPT_DIR/../chaincode/honeychain-cc"
-CC_NAME="honeychain"
+CC_PATH="$SCRIPT_DIR/../chaincode/madhuchain-cc"
+CC_NAME="madhuchain"
 CC_VERSION="${CC_VERSION:-1.0}"
-CHANNEL="${CHANNEL:-honeychannel}"
+CHANNEL="${CHANNEL:-madhuchannel}"
 CC_SEQUENCE="${CC_SEQUENCE:-1}"
 
 if [ ! -d "$TEST_NET" ]; then

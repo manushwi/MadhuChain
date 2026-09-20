@@ -1,11 +1,11 @@
-# HoneyChain — Easy Step-by-Step Setup Guide
+# MadhuChain — Easy Step-by-Step Setup Guide
 
-This guide takes a brand-new person from **zero** to a fully working HoneyChain app —
+This guide takes a brand-new person from **zero** to a fully working MadhuChain app —
 database, blockchain, backend, and all 4 apps — one step at a time. Follow the steps
 **in order**. It was written and verified on **Windows using Git Bash** (macOS/Linux
 work the same way — just skip the Windows notes).
 
-> **What is HoneyChain?** A honey supply-chain app that stores important events (harvests,
+> **What is MadhuChain?** A honey supply-chain app that stores important events (harvests,
 > batches, jars, quality checks) on a real blockchain (Hyperledger Fabric). Everything runs
 > on your own computer as "boxes" (Docker containers). This guide turns your computer into
 > the whole factory.
@@ -44,13 +44,13 @@ the blockchain scripts are bash scripts.
 In Git Bash:
 
 ```bash
-git clone <your-repo-url> Honeychain
-cd Honeychain
+git clone <your-repo-url> MadhuChain
+cd MadhuChain
 pwd
 ```
 
-`pwd` should print a path ending in `Honeychain`. Everything below assumes you are in this
-folder (`D:/.../Honeychain`).
+`pwd` should print a path ending in `MadhuChain`. Everything below assumes you are in this
+folder (`D:/.../MadhuChain`).
 
 Look at what you just got:
 
@@ -70,7 +70,7 @@ SETUP.md                 →  THIS file
 ## Step 3 — Start the database & cache (Docker boxes)
 
 The app needs a database (Postgres) and a fast cache (Redis). They're tiny boxes defined in
-`docker/infra`. From the `Honeychain` folder run:
+`docker/infra`. From the `MadhuChain` folder run:
 
 ```bash
 docker compose -f docker/infra/docker-compose.yml up -d
@@ -80,8 +80,8 @@ docker compose -f docker/infra/docker-compose.yml up -d
 
 ```bash
 docker ps --format '{{.Names}}'
-# honeychain-postgres
-# honeychain-redis
+# madhuchain-postgres
+# madhuchain-redis
 ```
 
 > Want to stop them later? `docker compose -f docker/infra/docker-compose.yml down`
@@ -114,7 +114,7 @@ cd ..
 The contract is Go code. It ships without its downloaded dependencies, so let them in:
 
 ```bash
-go -C ../chaincode/honeychain-cc mod vendor
+go -C ../chaincode/madhuchain-cc mod vendor
 ```
 
 ### 4c. Start the network + deploy the contract + get identities
@@ -162,7 +162,7 @@ Open `.env` in any editor (e.g. `notepad .env`) and **set these 4 lines** — us
 text for the secrets:
 
 ```
-DATABASE_URL=postgresql://honeychain:honeychain@localhost:5432/honeychain
+DATABASE_URL=postgresql://madhuchain:madhuchain@localhost:5432/madhuchain
 JWT_SECRET=typeanyrandomlongtexthere123
 DEVICE_API_KEY=anyrandomsecretkey123
 VERIFY_PUBLIC_BASE_URL=http://localhost:3000
@@ -176,7 +176,7 @@ VERIFY_PUBLIC_BASE_URL=http://localhost:3000
 
 ```bash
 bun run db:deploy                                       # applies all database "recipes"
-ADMIN_SEED_PASSWORD=honeychain123 bun run db:seed       # creates 3 organizations + an admin
+ADMIN_SEED_PASSWORD=madhuchain123 bun run db:seed       # creates 3 organizations + an admin
 ```
 
 ### 5c. Run it
@@ -189,7 +189,7 @@ Leave this terminal open. **Check it worked** — open a second Git Bash and run
 
 ```bash
 curl -s http://localhost:4000/health
-# {"status":"ok","service":"honeychain-backend"}
+# {"status":"ok","service":"madhuchain-backend"}
 ```
 
 ---
@@ -218,7 +218,7 @@ Notes for first-timers:
 ## Step 7 — Check the whole thing works
 
 1. **Admin dashboard** → http://localhost:3002
-   Login: `admin@honeychain.local` / `honeychain123`
+   Login: `admin@madhuchain.local` / `madhuchain123`
    (Set in Step 5b — created only the first time. On later runs, if your admin exists, this
    login still works; the seed only creates things that don't exist yet.)
 2. **Beekeeper app** → open http://localhost:8081 (or your phone)
@@ -237,7 +237,7 @@ Notes for first-timers:
 5. **Scan a jar QR** — open `http://localhost:3000/v/<jarId>` (or scan the QR image) → the
    consumer site shows the jar's full on-blockchain history.
 
-**You're done — the whole HoneyChain is running on your computer.** 🎉
+**You're done — the whole MadhuChain is running on your computer.** 🎉
 
 ---
 
@@ -334,7 +334,7 @@ bun run db:reset                                             # ERASES all app da
 |---------------|------------|
 | `EADDRINUSE ... :4000` | A backend is already running. Find it: `netstat -ano \| grep LISTENING \| grep ':4000 '`, then `taskkill //PID <number> //F`. Or just use the running one. |
 | QR sticker opens port 3001 | You missed the `VERIFY_PUBLIC_BASE_URL=http://localhost:3000` line (Step 5a). Set it, restart the backend. Old stickers still point at the old URL — print/scan the `/qr/<jarId>.png` image fresh. |
-| Port 3001 "already in use" | That's another project on your PC — ignore it; HoneyChain uses 3000/3002. |
+| Port 3001 "already in use" | That's another project on your PC — ignore it; MadhuChain uses 3000/3002. |
 | Smart-contract boxes missing after restart/reboot | Re-run `./deployChaincode.sh` — it detects and restarts them. |
 | Admin "Fabric events" look stale | Enable `FABRIC_EVENT_INDEXER_ENABLED=true` in `.env` and restart the backend after a fresh chain. |
 | `jq: command not found` | Git Bash doesn't include `jq`. `choco install jq` / `winget install jq`, or read JSON with `python`. |
@@ -379,7 +379,7 @@ Three ways to do it (cheapest first):
 
 **B. GitHub Codespaces — $0, no card, in the cloud**
 Free personal tier: 120 core-hours/mo (≈60 h on 2-core) + 15 GB storage.
-1. Push the repo: `gh repo create honeychain --private --source . --push`
+1. Push the repo: `gh repo create madhuchain --private --source . --push`
 2. On GitHub: **Code → Codespaces → Create codespace on main**.
 3. Inside it, run Steps 3–6 of this guide, plus two extras:
    ```bash
@@ -436,14 +436,14 @@ git clone https://github.com/hyperledger/fabric-samples.git    # 2. (first time)
 cd fabric-samples && git checkout 05edea0 && ./scripts/bootstrap.sh
 docker pull hyperledger/fabric-couchdb:latest
 cd ..
-go -C ../chaincode/honeychain-cc mod vendor
+go -C ../chaincode/madhuchain-cc mod vendor
 ./up.sh up && ./deployChaincode.sh && ./enrollIdentities.sh    # 3. blockchain
 cd ../..
 
 cd services/backend && bun install && bunx prisma generate     # 4. backend
 cp .env.example .env                                           # fill: DATABASE_URL, JWT_SECRET,
                                                                #       DEVICE_API_KEY, VERIFY_PUBLIC_BASE_URL=...:3000
-bun run db:deploy && ADMIN_SEED_PASSWORD=honeychain123 bun run db:seed
+bun run db:deploy && ADMIN_SEED_PASSWORD=madhuchain123 bun run db:seed
 bun run dev                                                    # :4000
 
 cd apps/consumer-web   && bun install && bun run dev           # 5. :3000

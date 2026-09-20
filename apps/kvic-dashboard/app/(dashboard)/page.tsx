@@ -12,7 +12,7 @@ export default async function OverviewPage() {
 
   return (
     <main className="page">
-      <PageHeader kicker="National operations snapshot" title="Trust, field to ledger" description="KVIC consortium oversight: member accounts, field inventory, and the anchored blockchain event stream." aside={<div className="date-stamp">Live read model<br/><strong>honeychannel</strong></div>} />
+      <PageHeader kicker="National operations snapshot" title="Trust, field to ledger" description="KVIC consortium oversight: member accounts, field inventory, and the anchored blockchain event stream." aside={<div className="date-stamp">Live read model<br/><strong>madhuchannel</strong></div>} />
       <section className="metric-grid metric-grid-single">
         <Link className="metric-link" href="/directory?role=BEEKEEPER"><Metric label="Beekeepers" value={beekeepers.total ?? 0} note="View all beekeepers" /></Link>
       </section>

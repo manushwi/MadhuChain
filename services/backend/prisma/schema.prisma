@@ -1,4 +1,4 @@
-// HoneyChain - Prisma schema
+// MadhuChain - Prisma schema
 // Database: PostgreSQL with TimescaleDB extension
 // NOTE: the SensorReading table is converted to a TimescaleDB hypertable via
 // a raw SQL migration (see prisma/migrations/xxx_init/migration.sql).

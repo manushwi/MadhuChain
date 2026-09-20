@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 
 const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:4000';
-const sessionCookie = 'honeychain_admin_session';
+const sessionCookie = 'madhuchain_admin_session';
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const token = (await cookies()).get(sessionCookie)?.value;

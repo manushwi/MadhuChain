@@ -26,7 +26,7 @@ export const darkPalette = {
   muted: '#8C8578',
 } as const;
 
-export type HoneychainPalette = typeof palette;
+export type MadhuChainPalette = typeof palette;
 
 // Deep warm shadow tone derived from sand/muted for neumorphism dark edge
 export const themeShadow = {
@@ -42,17 +42,17 @@ export const themeShadow = {
 
 export type ColorScheme = 'light' | 'dark';
 
-export function getPalette(scheme: ColorScheme): HoneychainPalette {
-  return scheme === 'dark' ? (darkPalette as unknown as HoneychainPalette) : palette;
+export function getPalette(scheme: ColorScheme): MadhuChainPalette {
+  return scheme === 'dark' ? (darkPalette as unknown as MadhuChainPalette) : palette;
 }
 
-export const statusColors = (c: HoneychainPalette) => ({
+export const statusColors = (c: MadhuChainPalette) => ({
   healthy: c.accentBright,
   watch: c.accent,
   alert: c.darkAccent,
 });
 
-export const batchStatusColors = (c: HoneychainPalette) => ({
+export const batchStatusColors = (c: MadhuChainPalette) => ({
   MINTED: c.accentBright,
   'IN TRANSIT': c.accent,
   'AT FACTORY': c.sand,

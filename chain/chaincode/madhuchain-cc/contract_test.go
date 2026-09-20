@@ -69,7 +69,7 @@ func setActor(ctx *fakeCtx, role, msp string) {
 	ctx.ci = &clientIdentityMock{attrs: map[string]string{"role": role}, msp: msp}
 }
 
-func createBatch(t *testing.T, contract *HoneyChainContract, ctx *fakeCtx, id string) {
+func createBatch(t *testing.T, contract *MadhuChainContract, ctx *fakeCtx, id string) {
 	t.Helper()
 	setActor(ctx, RoleBeekeeper, "Org1MSP")
 	if _, err := contract.CreateHarvestBatch(ctx, id, testHash, testHash, testHash); err != nil {
@@ -78,7 +78,7 @@ func createBatch(t *testing.T, contract *HoneyChainContract, ctx *fakeCtx, id st
 }
 
 func TestCreateHarvestBatchStoresOnlyHashesAndEmitsProof(t *testing.T) {
-	contract := NewHoneyChainContract()
+	contract := NewMadhuChainContract()
 	ctx := newCtx(RoleBeekeeper, "Org1MSP")
 	batch, err := contract.CreateHarvestBatch(ctx, "HC-001", testHash, "sha256:"+testHash, testHash)
 	if err != nil {
@@ -107,7 +107,7 @@ func TestCreateHarvestBatchStoresOnlyHashesAndEmitsProof(t *testing.T) {
 }
 
 func TestOrganizationAndRolePermissions(t *testing.T) {
-	contract := NewHoneyChainContract()
+	contract := NewMadhuChainContract()
 	for _, tc := range []struct{ role, msp string }{
 		{RoleFactoryWorker, "Org1MSP"},
 		{RoleBeekeeper, "Org2MSP"},
@@ -121,7 +121,7 @@ func TestOrganizationAndRolePermissions(t *testing.T) {
 }
 
 func TestHashOnlyLifecycleToRelease(t *testing.T) {
-	contract := NewHoneyChainContract()
+	contract := NewMadhuChainContract()
 	ctx := newCtx(RoleBeekeeper, "Org1MSP")
 	createBatch(t, contract, ctx, "FLOW-1")
 	setActor(ctx, RoleTransporter, "Org2MSP")
@@ -160,7 +160,7 @@ func TestHashOnlyLifecycleToRelease(t *testing.T) {
 }
 
 func TestRejectedCollectionIsTerminal(t *testing.T) {
-	contract := NewHoneyChainContract()
+	contract := NewMadhuChainContract()
 	ctx := newCtx(RoleBeekeeper, "Org1MSP")
 	createBatch(t, contract, ctx, "REJECT-1")
 	setActor(ctx, RoleTransporter, "Org2MSP")
@@ -173,7 +173,7 @@ func TestRejectedCollectionIsTerminal(t *testing.T) {
 }
 
 func TestCustodyRequiresCurrentCustodian(t *testing.T) {
-	contract := NewHoneyChainContract()
+	contract := NewMadhuChainContract()
 	ctx := newCtx(RoleBeekeeper, "Org1MSP")
 	createBatch(t, contract, ctx, "CUSTODY-1")
 	setActor(ctx, RoleTransporter, "Org2MSP")
@@ -191,7 +191,7 @@ func TestCustodyRequiresCurrentCustodian(t *testing.T) {
 }
 
 func TestTransporterTakesCustodyOnCollectionThenTransfers(t *testing.T) {
-	contract := NewHoneyChainContract()
+	contract := NewMadhuChainContract()
 	ctx := newCtx(RoleBeekeeper, "Org1MSP")
 	createBatch(t, contract, ctx, "HANDOFF-1")
 	// The transporter receives the lot and, on acceptance, custody moves from
@@ -216,7 +216,7 @@ func TestTransporterTakesCustodyOnCollectionThenTransfers(t *testing.T) {
 }
 
 func TestCustodyIntraOrgReassignment(t *testing.T) {
-	contract := NewHoneyChainContract()
+	contract := NewMadhuChainContract()
 	ctx := newCtx(RoleBeekeeper, "Org1MSP")
 	createBatch(t, contract, ctx, "INTRA-1")
 	// Transporter collects, moving custody to Org2MSP on chain.
@@ -237,7 +237,7 @@ func TestCustodyIntraOrgReassignment(t *testing.T) {
 }
 
 func TestOnlyKVICCanRevoke(t *testing.T) {
-	contract := NewHoneyChainContract()
+	contract := NewMadhuChainContract()
 	ctx := newCtx(RoleBeekeeper, "Org1MSP")
 	createBatch(t, contract, ctx, "REVOKE-1")
 	setActor(ctx, RoleAdmin, "Org2MSP")
@@ -255,7 +255,7 @@ func TestOnlyKVICCanRevoke(t *testing.T) {
 }
 
 func TestVerifyBatchHash(t *testing.T) {
-	contract := NewHoneyChainContract()
+	contract := NewMadhuChainContract()
 	ctx := newCtx(RoleBeekeeper, "Org1MSP")
 	createBatch(t, contract, ctx, "VERIFY-1")
 	verified, err := contract.VerifyBatchHash(ctx, "VERIFY-1", testHash)
@@ -270,7 +270,7 @@ func TestVerifyBatchHash(t *testing.T) {
 }
 
 func TestFactoryCanCreateHashOnlyBlend(t *testing.T) {
-	contract := NewHoneyChainContract()
+	contract := NewMadhuChainContract()
 	ctx := newCtx(RoleFactoryWorker, "Org2MSP")
 	batch, err := contract.CreateBlendBatch(ctx, "BLEND-1", testHash, testHash)
 	if err != nil {
@@ -282,7 +282,7 @@ func TestFactoryCanCreateHashOnlyBlend(t *testing.T) {
 }
 
 func TestKVICResolvesFraudFlag(t *testing.T) {
-	contract := NewHoneyChainContract()
+	contract := NewMadhuChainContract()
 	ctx := newCtx(RoleBeekeeper, "Org1MSP")
 	createBatch(t, contract, ctx, "FLAG-1")
 	setActor(ctx, RoleFactoryWorker, "Org2MSP")
@@ -300,7 +300,7 @@ func TestKVICResolvesFraudFlag(t *testing.T) {
 }
 
 func TestInvalidHashIsRejected(t *testing.T) {
-	contract := NewHoneyChainContract()
+	contract := NewMadhuChainContract()
 	ctx := newCtx(RoleBeekeeper, "Org1MSP")
 	if _, err := contract.CreateHarvestBatch(ctx, "BAD-HASH", "raw hive id", testHash, testHash); err == nil {
 		t.Fatal("raw value was accepted as a hash")

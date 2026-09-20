@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # =============================================================================
-# HoneyChain end-to-end chain smoke test.
+# MadhuChain end-to-end chain smoke test.
 #
 # Drives the FULL honey lifecycle through the backend REST API into the Fabric
-# ledger (honeychain-cc on honeychain-channel), including a deliberately-bad
+# ledger (madhuchain-cc on madhuchain-channel), including a deliberately-bad
 # output test to prove the fraud detector FLAGs + clears, mass-balance-enforced
 # blending, jar packaging, and on-chain consumer verification.
 #
@@ -18,8 +18,8 @@
 set -euo pipefail
 
 BASE="${BASE:-http://localhost:4000}"
-EMAIL="${EMAIL:-amara@honeychain.app}"
-PASSWORD="${PASSWORD:-honeychain123}"
+EMAIL="${EMAIL:-amara@madhuchain.app}"
+PASSWORD="${PASSWORD:-madhuchain123}"
 CT="Content-Type: application/json"
 
 command -v jq >/dev/null || { echo "e2e: jq is required (set PATH to chain/network/fabric-samples/bin)"; exit 1; }

@@ -303,7 +303,7 @@ button, input { font: inherit; }
 }
 
 /* ---------------------------------------------------------------------------
-   HoneyChain verification — hive-to-jar experience
+   MadhuChain verification — hive-to-jar experience
 --------------------------------------------------------------------------- */
 .status-copy > p { max-width: 680px; margin: 16px 0 0; color: var(--muted); line-height: 1.65; }
 .status-copy h1 { text-wrap: balance; }

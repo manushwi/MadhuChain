@@ -99,7 +99,7 @@ export default function ScanScreen() {
             onBarcodeScanned={busy ? undefined : handleScan}
             onMountError={({ message }) => setCameraError(message || 'The camera could not start.')}
           />
-          <Text style={t.small}>{busy ? 'Resolving asset with HoneyChain...' : 'Scan a HoneyChain batch or jar code.'}</Text>
+          <Text style={t.small}>{busy ? 'Resolving asset with MadhuChain...' : 'Scan a MadhuChain batch or jar code.'}</Text>
           <ErrorNote message={cameraError ?? undefined} />
           <ErrorNote message={err ?? undefined} />
           <NeuButton title="Enter a code instead" variant="ghost" onPress={() => setManualActive(true)} disabled={busy} />

@@ -7,7 +7,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   return (
     <main className="login-shell">
       <section className="login-context">
-        <div className="brand-mark">HC</div>
+        <div className="brand-mark">MC</div>
         <p className="eyebrow">KVIC Consortium Network</p>
         <h1>Evidence before assertion.</h1>
         <p className="login-copy">Monitor field telemetry, supply-chain custody, and cryptographic proofs from one accountable control room.</p>

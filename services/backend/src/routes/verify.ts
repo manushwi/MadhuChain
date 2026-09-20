@@ -15,7 +15,7 @@ const appearanceSchema = z.object({
 });
 
 const EVENT_PRESENTATION: Record<string, { title: string; summary: string }> = {
-  HARVESTED: { title: 'Harvest recorded', summary: 'The batch was harvested and minted onto the HoneyChain ledger.' },
+  HARVESTED: { title: 'Harvest recorded', summary: 'The batch was harvested and minted onto the MadhuChain ledger.' },
   COLLECTED: { title: 'Collected from apiary', summary: 'Custody was received by a transporter en route from the apiary.' },
   COLLECTION_REJECTED: { title: 'Collection rejected', summary: 'The collected lot was rejected during intake.' },
   LAB_APPROVED: { title: 'Laboratory approved', summary: 'Lab quality testing passed and the lot was approved for processing.' },
@@ -156,7 +156,7 @@ export async function verify(req: Request, res: Response, next: NextFunction): P
       authenticity: {
         status: authenticityStatus,
         message: authenticityStatus === 'VERIFIED'
-          ? 'This jar is authentic and matches the live HoneyChain ledger record.'
+          ? 'This jar is authentic and matches the live MadhuChain ledger record.'
           : 'This jar could not be confirmed as fully authentic. Review the record details.',
       },
       integrity: {
@@ -260,7 +260,7 @@ async function buildTimeline(batchId: string) {
 
   if (events.length) {
     return events.map((event) => {
-      const presentation = EVENT_PRESENTATION[event.eventType] ?? { title: event.eventType, summary: 'A HoneyChain ledger transaction updated this lot.' };
+      const presentation = EVENT_PRESENTATION[event.eventType] ?? { title: event.eventType, summary: 'A MadhuChain ledger transaction updated this lot.' };
       return {
         event_type: event.eventType,
         title: presentation.title,
@@ -288,7 +288,7 @@ async function buildTimeline(batchId: string) {
   return entries.map((entry) => {
     const b = entry.batch;
     const state = b?.currentStatus ?? 'UNKNOWN';
-    const presentation = EVENT_PRESENTATION[state] ?? { title: state, summary: 'A HoneyChain ledger transaction updated this lot.' };
+    const presentation = EVENT_PRESENTATION[state] ?? { title: state, summary: 'A MadhuChain ledger transaction updated this lot.' };
     return {
       event_type: state,
       title: presentation.title,

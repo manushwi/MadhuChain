@@ -20,7 +20,7 @@ export default function ForgotPasswordScreen() {
           Reset Password
         </Text>
         <Text variant="bodyMedium" style={{ color: c.muted, marginBottom: 20, textAlign: 'center' }}>
-          Password reset is not available in the app yet. Contact your HoneyChain administrator for account access help.
+          Password reset is not available in the app yet. Contact your MadhuChain administrator for account access help.
         </Text>
 
         <Neumorph style={styles.card}>

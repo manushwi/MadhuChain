@@ -9,7 +9,7 @@ export default function RequestAccessScreen() {
     <Screen>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.brand}>
-          <Text style={t.h1}>HoneyChain</Text>
+          <Text style={t.h1}>MadhuChain</Text>
           <Text style={t.small}>provisioned operations access</Text>
         </View>
         <NeuCard style={{ gap: 14 }}>
@@ -18,7 +18,7 @@ export default function RequestAccessScreen() {
             Public sign-up is not available for custody, laboratory, factory, quality, distribution, or administrator accounts.
           </Text>
           <Text style={t.body}>
-            Ask your HoneyChain site administrator to provision the correct role and facility access. Once issued, return here and sign in with your work email or phone number.
+            Ask your MadhuChain site administrator to provision the correct role and facility access. Once issued, return here and sign in with your work email or phone number.
           </Text>
           <Text style={t.small}>Roles are assigned by workflow responsibility and cannot be selected at sign-in.</Text>
         </NeuCard>

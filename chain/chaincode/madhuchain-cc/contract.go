@@ -28,13 +28,13 @@ var organizationAliases = map[string]map[string]bool{
 	"LAB":     {"Org3MSP": true, "LabMSP": true},
 }
 
-type HoneyChainContract struct {
+type MadhuChainContract struct {
 	contractapi.Contract
 }
 
-func NewHoneyChainContract() *HoneyChainContract { return &HoneyChainContract{} }
+func NewMadhuChainContract() *MadhuChainContract { return &MadhuChainContract{} }
 
-func (c *HoneyChainContract) CreateHarvestBatch(ctx contractapi.TransactionContextInterface, batchID, hiveHash, beekeeperHash, harvestHash string) (*HoneyBatch, error) {
+func (c *MadhuChainContract) CreateHarvestBatch(ctx contractapi.TransactionContextInterface, batchID, hiveHash, beekeeperHash, harvestHash string) (*HoneyBatch, error) {
 	if err := c.requireOrganizationRole(ctx, "KVIC", RoleBeekeeper); err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (c *HoneyChainContract) CreateHarvestBatch(ctx contractapi.TransactionConte
 	return batch, nil
 }
 
-func (c *HoneyChainContract) RecordCollection(ctx contractapi.TransactionContextInterface, batchID, collectionHash string, accepted bool) error {
+func (c *MadhuChainContract) RecordCollection(ctx contractapi.TransactionContextInterface, batchID, collectionHash string, accepted bool) error {
 	if err := c.requireOrganizationRole(ctx, "FACTORY", RoleTransporter, RoleFactoryWorker); err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (c *HoneyChainContract) RecordCollection(ctx contractapi.TransactionContext
 	return c.writeBatch(ctx, batch, "CollectionRecorded", hash)
 }
 
-func (c *HoneyChainContract) RecordLabResult(ctx contractapi.TransactionContextInterface, batchID, certificateHash string, approved bool) error {
+func (c *MadhuChainContract) RecordLabResult(ctx contractapi.TransactionContextInterface, batchID, certificateHash string, approved bool) error {
 	if err := c.requireOrganizationRole(ctx, "LAB", RoleLabTech); err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func (c *HoneyChainContract) RecordLabResult(ctx contractapi.TransactionContextI
 
 // CreateBlendBatch anchors a many-to-one blend without putting source lot IDs,
 // quantities, or processing parameters into transaction arguments or state.
-func (c *HoneyChainContract) CreateBlendBatch(ctx contractapi.TransactionContextInterface, batchID, sourceSummaryHash, processingHash string) (*HoneyBatch, error) {
+func (c *MadhuChainContract) CreateBlendBatch(ctx contractapi.TransactionContextInterface, batchID, sourceSummaryHash, processingHash string) (*HoneyBatch, error) {
 	if err := c.requireOrganizationRole(ctx, "FACTORY", RoleFactoryWorker); err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (c *HoneyChainContract) CreateBlendBatch(ctx contractapi.TransactionContext
 	return batch, nil
 }
 
-func (c *HoneyChainContract) FlagBatch(ctx contractapi.TransactionContextInterface, batchID, reasonHash string) error {
+func (c *MadhuChainContract) FlagBatch(ctx contractapi.TransactionContextInterface, batchID, reasonHash string) error {
 	if err := c.requireRole(ctx, RoleFactoryWorker, RoleLabTech, RoleQCManager, RoleAdmin); err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (c *HoneyChainContract) FlagBatch(ctx contractapi.TransactionContextInterfa
 	return c.writeBatch(ctx, batch, "FraudFlagged", hash)
 }
 
-func (c *HoneyChainContract) ResolveFlag(ctx contractapi.TransactionContextInterface, batchID, resolutionHash string, cleared bool) error {
+func (c *MadhuChainContract) ResolveFlag(ctx contractapi.TransactionContextInterface, batchID, resolutionHash string, cleared bool) error {
 	if err := c.requireOrganizationRole(ctx, "KVIC", RoleQCManager, RoleAdmin); err != nil {
 		return err
 	}
@@ -215,7 +215,7 @@ func (c *HoneyChainContract) ResolveFlag(ctx contractapi.TransactionContextInter
 	return c.writeBatch(ctx, batch, "FraudFlagResolved", hash)
 }
 
-func (c *HoneyChainContract) RecordProcessing(ctx contractapi.TransactionContextInterface, batchID, processingHash string) error {
+func (c *MadhuChainContract) RecordProcessing(ctx contractapi.TransactionContextInterface, batchID, processingHash string) error {
 	if err := c.requireOrganizationRole(ctx, "FACTORY", RoleFactoryWorker); err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func (c *HoneyChainContract) RecordProcessing(ctx contractapi.TransactionContext
 	return c.writeBatch(ctx, batch, "ProcessingRecorded", hash)
 }
 
-func (c *HoneyChainContract) RecordPackaging(ctx contractapi.TransactionContextInterface, batchID, packagingHash, bottleSummaryHash string) error {
+func (c *MadhuChainContract) RecordPackaging(ctx contractapi.TransactionContextInterface, batchID, packagingHash, bottleSummaryHash string) error {
 	if err := c.requireOrganizationRole(ctx, "FACTORY", RoleFactoryWorker); err != nil {
 		return err
 	}
@@ -261,7 +261,7 @@ func (c *HoneyChainContract) RecordPackaging(ctx contractapi.TransactionContextI
 	return c.writeBatch(ctx, batch, "PackagingRecorded", hashes[0])
 }
 
-func (c *HoneyChainContract) TransferCustody(ctx contractapi.TransactionContextInterface, assetID, assetType, fromMSP, toMSP, transferHash string) error {
+func (c *MadhuChainContract) TransferCustody(ctx contractapi.TransactionContextInterface, assetID, assetType, fromMSP, toMSP, transferHash string) error {
 	if err := validateIdentifier("assetId", assetID); err != nil {
 		return err
 	}
@@ -317,7 +317,7 @@ func (c *HoneyChainContract) TransferCustody(ctx contractapi.TransactionContextI
 	return c.writeBatch(ctx, batch, "CustodyTransferred", hash)
 }
 
-func (c *HoneyChainContract) RevokeBatch(ctx contractapi.TransactionContextInterface, batchID, reasonHash string) error {
+func (c *MadhuChainContract) RevokeBatch(ctx contractapi.TransactionContextInterface, batchID, reasonHash string) error {
 	if err := c.requireOrganizationRole(ctx, "KVIC", RoleAdmin, RoleQCManager); err != nil {
 		return err
 	}
@@ -338,11 +338,11 @@ func (c *HoneyChainContract) RevokeBatch(ctx contractapi.TransactionContextInter
 	return c.writeBatch(ctx, batch, "BatchRevoked", hash)
 }
 
-func (c *HoneyChainContract) GetBatch(ctx contractapi.TransactionContextInterface, batchID string) (*HoneyBatch, error) {
+func (c *MadhuChainContract) GetBatch(ctx contractapi.TransactionContextInterface, batchID string) (*HoneyBatch, error) {
 	return c.getBatch(ctx, batchID)
 }
 
-func (c *HoneyChainContract) GetBatchHistory(ctx contractapi.TransactionContextInterface, batchID string) ([]*BatchHistoryEntry, error) {
+func (c *MadhuChainContract) GetBatchHistory(ctx contractapi.TransactionContextInterface, batchID string) ([]*BatchHistoryEntry, error) {
 	if err := validateIdentifier("batchId", batchID); err != nil {
 		return nil, err
 	}
@@ -372,7 +372,7 @@ func (c *HoneyChainContract) GetBatchHistory(ctx contractapi.TransactionContextI
 	return entries, nil
 }
 
-func (c *HoneyChainContract) GetCustodyHistory(ctx contractapi.TransactionContextInterface, assetID string) ([]*CustodyEvent, error) {
+func (c *MadhuChainContract) GetCustodyHistory(ctx contractapi.TransactionContextInterface, assetID string) ([]*CustodyEvent, error) {
 	if err := validateIdentifier("assetId", assetID); err != nil {
 		return nil, err
 	}
@@ -398,7 +398,7 @@ func (c *HoneyChainContract) GetCustodyHistory(ctx contractapi.TransactionContex
 
 // VerifyBatchHash confirms that a supplied off-chain record hash is anchored
 // in one of the batch's explicit proof fields. It does not disclose the record.
-func (c *HoneyChainContract) VerifyBatchHash(ctx contractapi.TransactionContextInterface, batchID, expectedHash string) (bool, error) {
+func (c *MadhuChainContract) VerifyBatchHash(ctx contractapi.TransactionContextInterface, batchID, expectedHash string) (bool, error) {
 	hash, err := normalizeHash(expectedHash)
 	if err != nil {
 		return false, err
@@ -419,7 +419,7 @@ func (c *HoneyChainContract) VerifyBatchHash(ctx contractapi.TransactionContextI
 	return false, nil
 }
 
-func (c *HoneyChainContract) GetChainEvent(ctx contractapi.TransactionContextInterface, transactionID string) (*ChainEventRecord, error) {
+func (c *MadhuChainContract) GetChainEvent(ctx contractapi.TransactionContextInterface, transactionID string) (*ChainEventRecord, error) {
 	if err := validateIdentifier("transactionId", transactionID); err != nil {
 		return nil, err
 	}
@@ -437,7 +437,7 @@ func (c *HoneyChainContract) GetChainEvent(ctx contractapi.TransactionContextInt
 	return record, nil
 }
 
-func (c *HoneyChainContract) writeBatch(ctx contractapi.TransactionContextInterface, batch *HoneyBatch, eventType, payloadHash string) error {
+func (c *MadhuChainContract) writeBatch(ctx contractapi.TransactionContextInterface, batch *HoneyBatch, eventType, payloadHash string) error {
 	timestamp, err := transactionTime(ctx)
 	if err != nil {
 		return err
@@ -472,7 +472,7 @@ func (c *HoneyChainContract) writeBatch(ctx contractapi.TransactionContextInterf
 	return nil
 }
 
-func (c *HoneyChainContract) getBatch(ctx contractapi.TransactionContextInterface, batchID string) (*HoneyBatch, error) {
+func (c *MadhuChainContract) getBatch(ctx contractapi.TransactionContextInterface, batchID string) (*HoneyBatch, error) {
 	if err := validateIdentifier("batchId", batchID); err != nil {
 		return nil, err
 	}
@@ -490,7 +490,7 @@ func (c *HoneyChainContract) getBatch(ctx contractapi.TransactionContextInterfac
 	return batch, nil
 }
 
-func (c *HoneyChainContract) getMutableBatch(ctx contractapi.TransactionContextInterface, batchID string) (*HoneyBatch, error) {
+func (c *MadhuChainContract) getMutableBatch(ctx contractapi.TransactionContextInterface, batchID string) (*HoneyBatch, error) {
 	batch, err := c.getBatch(ctx, batchID)
 	if err != nil {
 		return nil, err
@@ -507,7 +507,7 @@ func (c *HoneyChainContract) getMutableBatch(ctx contractapi.TransactionContextI
 	return batch, nil
 }
 
-func (c *HoneyChainContract) requireOrganizationRole(ctx contractapi.TransactionContextInterface, organization string, roles ...string) error {
+func (c *MadhuChainContract) requireOrganizationRole(ctx contractapi.TransactionContextInterface, organization string, roles ...string) error {
 	msp, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
 		return fmt.Errorf("failed to read caller MSP: %w", err)
@@ -518,7 +518,7 @@ func (c *HoneyChainContract) requireOrganizationRole(ctx contractapi.Transaction
 	return c.requireRole(ctx, roles...)
 }
 
-func (c *HoneyChainContract) requireRole(ctx contractapi.TransactionContextInterface, roles ...string) error {
+func (c *MadhuChainContract) requireRole(ctx contractapi.TransactionContextInterface, roles ...string) error {
 	role, found, err := ctx.GetClientIdentity().GetAttributeValue("role")
 	if err != nil {
 		return fmt.Errorf("failed to read role attribute: %w", err)

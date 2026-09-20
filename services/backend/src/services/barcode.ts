@@ -81,7 +81,7 @@ export async function buildLabelPdf(payload: BarcodePayload): Promise<Buffer> {
 
     doc
       .fontSize(20)
-      .text('HoneyChain — Raw Material', { align: 'center' });
+      .text('MadhuChain — Raw Material', { align: 'center' });
     doc.moveDown(0.4);
     doc
       .fontSize(12)

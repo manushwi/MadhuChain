@@ -6,7 +6,7 @@ const sans = Manrope({ variable: '--font-sans', subsets: ['latin'] });
 const mono = IBM_Plex_Mono({ variable: '--font-mono', subsets: ['latin'], weight: ['400', '500', '600'] });
 
 export const metadata: Metadata = {
-  title: 'HoneyChain | KVIC Control Room',
+  title: 'MadhuChain | KVIC Control Room',
   description: 'Consortium oversight, hive telemetry, and ledger evidence',
 };
 

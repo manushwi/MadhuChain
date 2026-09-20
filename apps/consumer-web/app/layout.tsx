@@ -4,11 +4,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "HoneyChain | Verify your honey",
-    template: "%s | HoneyChain",
+    default: "MadhuChain | Verify your honey",
+    template: "%s | MadhuChain",
   },
-  description: "Verify the origin, authenticity, quality, and complete chain of custody of a HoneyChain jar.",
-  applicationName: "HoneyChain Verification",
+  description: "Verify the origin, authenticity, quality, and complete chain of custody of a MadhuChain jar.",
+  applicationName: "MadhuChain Verification",
   robots: { index: true, follow: true },
 };
 

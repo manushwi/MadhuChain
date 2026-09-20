@@ -67,7 +67,7 @@ export async function analyzeWithLlm(
   const timeoutMs = options.timeoutMs ?? 15_000;
 
   const system = [
-    'You are a senior apicultural advisor for the HoneyChain platform, an IoT hive-monitoring',
+    'You are a senior apicultural advisor for the MadhuChain platform, an IoT hive-monitoring',
     'and honey supply-chain program. A beekeeper relies on a hive monitor that records ambient',
     'temperature (°C), humidity (%), hive weight (kg) and battery voltage (V), plus a stream of',
     'computed risk scores and condition indicators.',
@@ -131,8 +131,8 @@ export async function analyzeWithLlm(
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://honeychain.local',
-        'X-Title': 'HoneyChain Beekeeper App',
+        'HTTP-Referer': 'https://madhuchain.local',
+        'X-Title': 'MadhuChain Beekeeper App',
       },
       body: JSON.stringify({
         model,

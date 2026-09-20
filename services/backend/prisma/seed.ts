@@ -9,8 +9,8 @@ const prisma = new PrismaClient();
 async function main() {
   const orgs = [
     { organizationId: 'KVIC', name: 'Khadi and Village Industries Commission', type: 'KVIC' as const, mspId: 'Org1MSP' },
-    { organizationId: 'FACTORY-MVP', name: 'HoneyChain Collection and Factory', type: 'FACTORY' as const, mspId: 'Org2MSP' },
-    { organizationId: 'LAB-MVP', name: 'HoneyChain Certified Lab', type: 'LAB' as const, mspId: 'Org3MSP' },
+    { organizationId: 'FACTORY-MVP', name: 'MadhuChain Collection and Factory', type: 'FACTORY' as const, mspId: 'Org2MSP' },
+    { organizationId: 'LAB-MVP', name: 'MadhuChain Certified Lab', type: 'LAB' as const, mspId: 'Org3MSP' },
   ];
 
   for (const org of orgs) {
@@ -26,7 +26,7 @@ async function main() {
 
   const adminPassword = process.env.ADMIN_SEED_PASSWORD;
   if (adminPassword && kvic) {
-    const adminEmail = process.env.ADMIN_SEED_EMAIL ?? 'admin@honeychain.local';
+    const adminEmail = process.env.ADMIN_SEED_EMAIL ?? 'admin@madhuchain.local';
     await prisma.user.upsert({
       where: { email: adminEmail },
       update: { organizationId: kvic.id, role: 'ADMIN', status: 'ACTIVE' },

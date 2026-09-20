@@ -38,7 +38,7 @@ export default function LoginScreen() {
       >
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.brand}>
-            <Text style={t.h1}>HoneyChain</Text>
+            <Text style={t.h1}>MadhuChain</Text>
             <Text style={[t.small, { marginTop: 4 }]}>operations · custody, quality and production</Text>
           </View>
           <NeuCard lifted style={{ gap: 16 }}>

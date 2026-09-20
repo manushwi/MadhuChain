@@ -1,4 +1,4 @@
-module honeychain/chaincode
+module madhuchain/chaincode
 
 go 1.22
 

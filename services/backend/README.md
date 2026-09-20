@@ -1,18 +1,18 @@
-# HoneyChain Backend
+# MadhuChain Backend
 
-The single bridge between HoneyChain apps and the Hyperledger Fabric ledger.
+The single bridge between MadhuChain apps and the Hyperledger Fabric ledger.
 REST API (Express) + chronicle DB (Prisma/TimescaleDB) + Fabric Gateway (`@hyperledger/fabric-gateway`), written in TypeScript and run with [Bun](https://bun.sh).
 
-Every honey-chain write (`mint`, `RecordReceived`, quality tests, processing,
+Every madhu-chain write (`mint`, `RecordReceived`, quality tests, processing,
 packaging, blend, transfer, clear-flag) is submitted as a Fabric transaction to
-`honeychain-cc` on `honeychain-channel`; responses are mirrored into Postgres for
+`madhuchain-cc` on `madhuchain-channel`; responses are mirrored into Postgres for
 querying. The `GET /api/verify/:jarId` endpoint resolves a jar back to its on-chain
 origin and quality history.
 
 ## Prerequisites
 
 - Node 20+ or [Bun](https://bun.sh) (dev server runs on Bun; TS is type-checked with `tsc`)
-- A running Fabric test network with `honeychain-channel` and `honeychain-cc` deployed,
+- A running Fabric test network with `madhuchain-channel` and `madhuchain-cc` deployed,
   and identities enrolled. See `chain/network/enrollIdentities.sh` and the chain README.
 - TimescaleDB/Postgres reachable at `DATABASE_URL`.
 
@@ -22,7 +22,7 @@ origin and quality history.
 cp .env.example .env        # fill in secrets + Fabric paths
 bun install                 # or: npm install
 bun run db:migrate          # apply Prisma migrations
-bun run db:seed             # seed hives + demo user (amara@honeychain.app / honeychain123)
+bun run db:seed             # seed hives + demo user (amara@madhuchain.app / madhuchain123)
 bun run dev                 # starts API on :4000 (bun --watch)
 ```
 
@@ -72,7 +72,7 @@ Only `/health`, `/api/auth/login` and `/api/auth/signup` are public.
 | GET | `/api/hives/:id/readings` | historical readings |
 | POST | `/api/sensor-data` | ingest sensor readings (device API key) |
 
-### Fabric honey-chain (core flow)
+### Fabric madhu-chain (core flow)
 
 | Method | Path | Body (zod) |
 | --- | --- | --- |
@@ -100,7 +100,7 @@ can no longer execute transporter, lab, factory, or QC operations.
 
 ```bash
 TOKEN=$(curl -s -X POST localhost:4000/api/auth/login -H 'Content-Type: application/json' \
-  -d '{"email":"amara@honeychain.app","password":"honeychain123"}' | jq -r .token)
+  -d '{"email":"amara@madhuchain.app","password":"madhuchain123"}' | jq -r .token)
 AUTH="Authorization: Bearer $TOKEN"
 
 curl -s -X POST localhost:4000/api/batches/mint -H "$AUTH" -H 'Content-Type: application/json' \

@@ -1,13 +1,13 @@
-# HoneyChain 🍯
+# MadhuChain 🍯
 
 > From hive to home — every jar tells its true story.
-> HoneyChain records each jar of honey's journey on a blockchain that no single company controls, and gives every jar a **QR sticker** you can scan to see where it really came from.
+> MadhuChain records each jar of honey's journey on a blockchain that no single company controls, and gives every jar a **QR sticker** you can scan to see where it really came from.
 
-## What is HoneyChain?
+## What is MadhuChain?
 
 Honey in India is often labelled "pure," "organic," or "single-source" — but none of that can be checked. Supply chains have many hands: a beekeeper, a transporter, a lab, a factory, a distributor. At every step someone *could* alter the records, and usually no one's watching.
 
-HoneyChain fixes that with a simple idea:
+MadhuChain fixes that with a simple idea:
 
 > **The story of your honey is written once, signed by many, and can't be edited afterwards.**
 
@@ -31,7 +31,7 @@ Each step of the journey is recorded as a "sealed stamp" on a shared, tamper-evi
 
 ## The people — who does what
 
-HoneyChain is used by **8 types of people**. Each one has a specific job, a specific app screen, and a specific stamp they add to the ledger.
+MadhuChain is used by **8 types of people**. Each one has a specific job, a specific app screen, and a specific stamp they add to the ledger.
 
 ### 🐝 1. The Beekeeper
 *The person who keeps the hives and harvests the honey.*
@@ -204,7 +204,7 @@ flowchart LR
 ```
 
 ### 🛡️ 7. The Admin (KVIC)
-*The government commission that operates HoneyChain.*
+*The government commission that operates MadhuChain.*
 
 **What they do:**
 - Register and manage organisations and users.
@@ -300,7 +300,7 @@ flowchart TB
                  ▼              │            ▼
    PostgreSQL               Fabric Gateway ──► Hyperledger Fabric
    (people, hives,           SDK               (3 peer orgs + orderer)
-    quality, jars,           submit/evaluate   └─ Go chaincode "honeychain"
+    quality, jars,           submit/evaluate   └─ Go chaincode "madhuchain"
     sensor telemetry)             │              └─ Hash-only world state
                                  Redis (caches verify pages)
 ```
@@ -376,7 +376,7 @@ Every call is **double-checked**: the signing organisation must belong to the ri
 ## Project layout (high level)
 
 ```
-chain/            Fabric network bootstrap + Go chaincode (honeychain)
+chain/            Fabric network bootstrap + Go chaincode (madhuchain)
 services/backend/ Core API: auth, batches, factory, verify, hives, admin
 apps/beekeeper-app/   Beekeeper app (Expo)
 apps/factory-app/     All factory operator apps (Expo)

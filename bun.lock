@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "honeychain",
+      "name": "madhuchain",
     },
     "apps/beekeeper-app": {
       "name": "beekeeper-app",
